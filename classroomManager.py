@@ -34,6 +34,10 @@ while True:
     CURRENT_DATE_TIME = dt.datetime.now() - (dt.datetime.now()-SERVER_DATE_TIME)
     print (CURRENT_DATE_TIME) #this line will give server time but updated. Time difference must be updated everytime server time changes
 """
+
+# Global variables to keep track of everything
+WEEK_SCHEDULE_CREATED = False
+
 #get database's date and time mainly for debug purposes
 mainCursor.execute(QUERY_GET_DATE_TIME)
 SERVER_DATE_TIME = mainCursor.fetchone()[1]
@@ -43,30 +47,36 @@ CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
 - This is the main loop.
 - It will be running every second the whole day and all major function will be performed here.
 """
+debug = open("debug.log", 'w')
 while True:
     # Update local clock to sync with server clock
     mainCursor.execute(QUERY_GET_DATE_TIME)
     newdate = mainCursor.fetchone()[1]
-    if str(SERVER_DATE_TIME) != str(newdate):
+    if SERVER_DATE_TIME != newdate:
         SERVER_DATE_TIME = newdate
         DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
         CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
     else:
         CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
-    utilities.printtest()
-    """
-    # If it is the start of the week, add schedule from schedule table to this week's schedule table
-    if startOfWeek(DEBUG_TIME_DIFFERENCE):
-        createWeekSchedule()
-    
+
+    # If it is the start of the week and weekly schedule table is not updated, add schedule from schedule table to this week's schedule table
+    if utilities.isStartOfWeek(DEBUG_TIME_DIFFERENCE) and not WEEK_SCHEDULE_CREATED:
+        WEEK_SCHEDULE_CREATED = utilities.createWeekSchedule()
+        print (WEEK_SCHEDULE_CREATED)
+    elif not utilities.isEndOfWeek(DEBUG_TIME_DIFFERENCE) and not WEEK_SCHEDULE_CREATED:
+        WEEK_SCHEDULE_CREATED = utilities.createWeekSchedule()
+        print ("Updated")
+
     # At the end fo the week, remove everything from the weekly schedule table and get it prepared for next week's schedule
-    if endOfWeek(DEBUG_TIME_DIFFERENCE):
-        truncateWeekSchedule()
-    """
+    if utilities.isEndOfWeek(DEBUG_TIME_DIFFERENCE) and WEEK_SCHEDULE_CREATED:
+        WEEK_SCHEDULE_CREATED = not utilities.truncateWeekSchedule()
+        print (WEEK_SCHEDULE_CREATED)
 
     # Commit whatever changes were made during the loop
     connection.commit()
 
+#Close everything (probably not going to occur)
+debug = open("debug.log", 'w')
 if connection.is_connected():
     connection.close()
     print("Disconnected from the server...")
