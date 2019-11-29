@@ -33,7 +33,7 @@ QUERY_INSERT_WEEK_SCHEDULE_NORMAL_FORMAT = "INSERT INTO tbl_week_schedule (sched
 QUERY_TRUNCATE_WEEK_SCHEDULE = "TRUNCATE TABLE tbl_week_schedule"
 
 # for the contents of schedule table
-QUERY_GET_SCHEDULE_SCHED_ID = "SELECT schedule_id FROM tbl_schedule"
+QUERY_GET_NORMAL_SCHEDULE_ID = "SELECT schedule_id FROM tbl_schedule"
 
 """
 This section will contain all the function used by the main file.
@@ -79,8 +79,7 @@ def isEndOfWeek(DEBUG_TIME_DIFFERENCE):
 
 # Fcuntion that will delete all entries from current week's table
 # Returns true or false as success signal.
-def truncateWeekSchedule(connection):
-    mainCursor = connection.cursor()
+def truncateWeekSchedule(mainCursor):
     #Run select query and get result if there was no error    
     (queryRan, ifError) = runQuery(mainCursor, QUERY_GET_WEEK_SCHEDULE)
     if queryRan:
@@ -95,6 +94,7 @@ def truncateWeekSchedule(connection):
         (truncateQueryRan, ifTruncateError) = runQuery(mainCursor, QUERY_TRUNCATE_WEEK_SCHEDULE)
         if truncateQueryRan:
             truncateResult = mainCursor._rowcount
+            truncateResult = truncateResult # Just to remove "Unused variable" warnings
         else:
             print (ifTruncateError)
             return False
@@ -106,11 +106,9 @@ def truncateWeekSchedule(connection):
 
 # Fcuntion that will get all entries from schedule and put them in current week's table
 # Returns true or false as success signal.
-def createWeekSchedule(connection):
-    mainCursor = connection.cursor()
-    
+def createWeekSchedule(mainCursor):    
     # Get all data from schedule table and assign it to current week's schedule table
-    (selectRan, ifSelectError) = runQuery(mainCursor, QUERY_GET_SCHEDULE_SCHED_ID)
+    (selectRan, ifSelectError) = runQuery(mainCursor, QUERY_GET_NORMAL_SCHEDULE_ID)
     if selectRan:
         selectResult = mainCursor.fetchall()
     else:
@@ -133,6 +131,21 @@ def createWeekSchedule(connection):
             counter = counter + 1
     print ("Week schedule created!\nInserted: " + str(counter) + " entries.")
     return True
+
+# This function will check if the weekly schedule table is not empty.
+# Returns True if data is present and False if table is empty
+def isWeekScheduleCreated(mainCursor):
+    (selectRan, ifSelectError) = runQuery(mainCursor, QUERY_GET_WEEK_SCHEDULE)
+    if selectRan:
+        entriesInTable = len(mainCursor.fetchall())
+    else:
+        print (ifSelectError)
+        return False
+    
+    if entriesInTable > 0:
+        return True
+    else:
+        return False
 
 """
 # This section is also for debuggin purposes only.
