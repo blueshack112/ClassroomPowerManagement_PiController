@@ -1,6 +1,8 @@
 import mysql.connector as cn
 import datetime as dt
 import managementUtilities as utilities
+import time
+import os
 
 # database connection variables
 dbHost = "192.168.18.4"
@@ -37,7 +39,9 @@ while True:
 # Global variables to keep track of everything
 WEEK_SCHEDULE_CREATED = False
 CURRENT_DAY_OF_WEEK = 0 # 1 is monday and 7 is sunday. We need to perform actions 1 through 5 (Monday to Saturday)
-CURRENT_SLOT = 0 # 0 Means not a slot. 1-7 are usable values.
+CURRENT_SLOT = -1 # -1 Means not a slot. 0 means between two sessions(break). 1-7 are usable values.
+CURRENT_DAY_SCHEDULE_ITEMS = [] # Will contain a list of today's schedule items
+CURRENT_ACTIVE_COURSE = None # Will specify which course is currently active
 
 #get database's date and time mainly for debug purposes
 (debugDateRan, ifDebugDateError) = utilities.runQuery(mainCursor, utilities.QUERY_GET_DATE_TIME)
@@ -67,25 +71,69 @@ while True:
     # If it is the start of the week and weekly schedule table is not updated, add schedule from schedule table to this week's schedule table
     if utilities.isStartOfWeek(DEBUG_TIME_DIFFERENCE) and not WEEK_SCHEDULE_CREATED:
         WEEK_SCHEDULE_CREATED = utilities.createWeekSchedule(mainCursor)
-        print (WEEK_SCHEDULE_CREATED)
     elif not utilities.isEndOfWeek(DEBUG_TIME_DIFFERENCE) and not WEEK_SCHEDULE_CREATED:
         WEEK_SCHEDULE_CREATED = utilities.createWeekSchedule(mainCursor)
-        print (WEEK_SCHEDULE_CREATED)
 
     # At the end fo the week, remove everything from the weekly schedule table and get it prepared for next week's schedule
     if utilities.isEndOfWeek(DEBUG_TIME_DIFFERENCE) and WEEK_SCHEDULE_CREATED:
         WEEK_SCHEDULE_CREATED = not utilities.truncateWeekSchedule(mainCursor)
-        print (WEEK_SCHEDULE_CREATED)
     elif utilities.isEndOfWeek(DEBUG_TIME_DIFFERENCE):
         WEEK_SCHEDULE_CREATED = utilities.isWeekScheduleCreated(mainCursor)
     
+    # Calculate current day of week and slot
     CURRENT_DAY_OF_WEEK = CURRENT_DATE_TIME.weekday() + 1
-    print (CURRENT_DAY_OF_WEEK)
+    tempSlot = utilities.getCurrentSlot(DEBUG_TIME_DIFFERENCE)
+    # If the function says its break time (by returning 0) keep the same slot
+    if not tempSlot == 0:
+        CURRENT_SLOT = tempSlot
+    
+
+    # Get today's schedule items from the database
+    CURRENT_DAY_SCHEDULE_ITEMS = utilities.getScheduleItems(mainCursor, CURRENT_DAY_OF_WEEK)
+
+    # Determine which course is currently active
+    for i in range(0, len(CURRENT_DAY_SCHEDULE_ITEMS)):
+        if CURRENT_DAY_SCHEDULE_ITEMS[i].dayOfWeek == CURRENT_DAY_OF_WEEK and CURRENT_DAY_SCHEDULE_ITEMS[i].slot == CURRENT_SLOT:
+            CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+            break
+        elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 2 and CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT:
+            CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+            break
+        elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 3 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT):
+            CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+            break
+        else:
+            if i == len(CURRENT_DAY_SCHEDULE_ITEMS)-1:
+                CURRENT_ACTIVE_COURSE = None
+    
+    # if there is not course active, turn off the applicances
+    if not CURRENT_ACTIVE_COURSE:
+        #TODO: write function for turning GPIO off
+        print ("turnit all off")
+    
+    time.sleep(1)
+    os.system("cls")
+    print ("SUMMARY")
+    print ("=========")
+    print ("Datetime: " + str(CURRENT_DATE_TIME)[:-7])
+    print ("Week schedule created: " + str(WEEK_SCHEDULE_CREATED))
+    print ("Day: " + str(CURRENT_DAY_OF_WEEK))
+    print ("Slot: " + str(CURRENT_SLOT))
+    if CURRENT_ACTIVE_COURSE:
+        print ("Current active course: " + str(CURRENT_ACTIVE_COURSE.courseID))
+    else:
+        print ("Current active course: None")
+    print ("Today's schedule: ")
+    for i in CURRENT_DAY_SCHEDULE_ITEMS:
+        print (vars(i))
+    
+
     # Commit whatever changes were made during the loop
     connection.commit()
 
 #Close everything (probably not going to occur)
 debug = open("debug.log", 'w')
+debug.close()
 if connection.is_connected():
     connection.close()
     print("Disconnected from the server...")
