@@ -95,21 +95,29 @@ while True:
     for i in range(0, len(CURRENT_DAY_SCHEDULE_ITEMS)):
         if CURRENT_DAY_SCHEDULE_ITEMS[i].dayOfWeek == CURRENT_DAY_OF_WEEK and CURRENT_DAY_SCHEDULE_ITEMS[i].slot == CURRENT_SLOT:
             CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+            CURRENT_ACTIVE_COURSE.isACtive = True
             break
         elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 2 and CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT:
             CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+            CURRENT_ACTIVE_COURSE.isACtive = True
             break
         elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 3 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT):
             CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+            CURRENT_ACTIVE_COURSE.isACtive = True
             break
         else:
             if i == len(CURRENT_DAY_SCHEDULE_ITEMS)-1:
                 CURRENT_ACTIVE_COURSE = None
     
-    # if there is not course active, turn off the applicances
+    # if there is an active course, turn on the applicances
+    if CURRENT_ACTIVE_COURSE:
+        #TODO: write function to turn on the appliances
+        print ("Turn it on!")
+
+    # if there is no course active, turn off the applicances
     if not CURRENT_ACTIVE_COURSE:
         #TODO: write function for turning GPIO off
-        print ("turnit all off")
+        print ("Turn it all off!")
     
     time.sleep(1)
     os.system("cls")
