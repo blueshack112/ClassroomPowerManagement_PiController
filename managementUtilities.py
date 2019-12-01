@@ -1,8 +1,11 @@
 import datetime as dt
 import mysql.connector as cn
 from operator import itemgetter
+import globalVariablesandFunctions as gvs
+from utilityClasses import NormalScheduleItem
+from utilityClasses import ExtraScheduleItem
+asd = "check"
 
-#"""
 # This section is only for debugging purposes
 # database connection variables
 dbHost = "192.168.18.4"
@@ -20,82 +23,19 @@ except Exception as e:
     print("Could not connect to the server, exiting...")
     print (e)
     exit()
-#"""
 
-"""
-This section will contain all the query templates and
-important variables needed during the running of this file.
-"""
-THIS_ROOM = 1001
-# For debugging, get date and time
-QUERY_GET_DATE_TIME = "SELECT debug_id, system_date_time_to_set FROM tbl_debug "
+SERVER_DATE_TIME = dt.datetime.now()
+(debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
+if debugDateRan:
+    SERVER_DATE_TIME = mainCursor.fetchone()[1]
+else:
+    print(ifDebugDateError)
+DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
 
-# for the contents of current week's table
-QUERY_GET_WEEK_SCHEDULE = "SELECT week_schedule_id, schedule_id, extra_schedule_id FROM tbl_week_schedule"
-QUERY_INSERT_WEEK_SCHEDULE_NORMAL_FORMAT_VALUES = "INSERT INTO tbl_week_schedule (schedule_id) VALUES {};"
-QUERY_INSERT_WEEK_SCHEDULE_EXTRA_FORMAT_VALUES = "INSERT INTO tbl_week_schedule (extra_schedule_id) VALUES {};"
-QUERY_TRUNCATE_WEEK_SCHEDULE = "TRUNCATE TABLE tbl_week_schedule"
-
-# for the contents of schedule table
-QUERY_GET_NORMAL_SCHEDULE_ID = "SELECT schedule_id FROM tbl_schedule"
-QUERY_GET_EXTRA_SCHEDULE_ID = "SELECT extra_schedule_id FROM tbl_extra_schedule"
-
-# Select query for views needed to alot schedule items
-QUERY_GET_NORMAL_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK = "SELECT schedule_id, teacher_id, room_id, course_id, day_of_week, slot, class_length FROM view_normal_schedule WHERE room_id = {} and day_of_week = {}"
-QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK = "SELECT extra_schedule_id, teacher_id, room_id, course_id, day_of_week, slot, class_length, accept_status FROM view_extra_schedule WHERE room_id = {} and day_of_week = {}"
-
-# for the contents of room status table
-QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID = "SELECT attendance FROM tbl_room_status WHERE course_id = {}"
-QUERY_INSERT_ROOM_STATUS_FORMAT_VALUES = "INSERT INTO tbl_room_status (room_id, course_id, relay_used, class_date, slot) VALUES {};"
-
-"""
-This section will contain all the classes used to store data in a structured format.
-"""
-class NormalScheduleItem:
-    isACtive = False
-    roomStatusUpdated = False
-    attendance = -1 # -1 means that attendance has not yet arrived
-    def __init__(self, scheduleID, teacherID, roomID, courseID, dayOfWeek, slot, classLength):
-        self.scheduleID = scheduleID
-        self.teacherID = teacherID
-        self.roomID = roomID
-        self.courseID = courseID
-        self.dayOfWeek = dayOfWeek
-        self.slot = slot
-        self.classLength = classLength
-        self.isACtive = False
-        self.roomStatusUpdated = False
-        self.attendance = -1
-
-class ExtraScheduleItem:
-    isACtive = False
-    roomStatusUpdated = False
-    attendance = -1 # -1 means that attendance has not yet arrived
-    def __init__(self, extraScheduleID, teacherID, roomID, courseID, dayOfWeek, slot, classLength, acceptStatus):
-        self.extra_schedule_id = extraScheduleID
-        self.teacherID = teacherID
-        self.roomID = roomID
-        self.courseID = courseID
-        self.dayOfWeek = dayOfWeek
-        self.slot = slot
-        self.classLength = classLength
-        self.acceptStatus = acceptStatus
-        self.isACtive = False
-        self.roomStatusUpdated = False
-        self.attendance = -1
 
 """
 This section will contain all the function used by the main file.
 """
-# Function solely to run queries and grab exceptions in a clean manner
-# Returns an error and boolean false if an error occures
-# Returns true and a "Done" string if it was successful
-def runQuery (mainCursor, query):
-    try:
-        mainCursor.execute(query)
-    except Exception as e:
-        return (False, e)
-    return (True, "Done")
 
 # Function that checks it right now is the start of the week
 # Returns true or false
@@ -130,7 +70,7 @@ def isEndOfWeek(DEBUG_TIME_DIFFERENCE):
 # Returns true or false as success signal
 def truncateWeekSchedule(mainCursor):
     #Run select query and get result if there was no error    
-    (queryRan, ifError) = runQuery(mainCursor, QUERY_GET_WEEK_SCHEDULE)
+    (queryRan, ifError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_WEEK_SCHEDULE)
     if queryRan:
         result = mainCursor.fetchall()
     else:
@@ -140,7 +80,7 @@ def truncateWeekSchedule(mainCursor):
     # Truncate Table if their are entries present else return True
     entriesInTable = len(result)
     if entriesInTable > 0:
-        (truncateQueryRan, ifTruncateError) = runQuery(mainCursor, QUERY_TRUNCATE_WEEK_SCHEDULE)
+        (truncateQueryRan, ifTruncateError) = gvs.runQuery(mainCursor, gvs.QUERY_TRUNCATE_WEEK_SCHEDULE)
         if truncateQueryRan:
             truncateResult = mainCursor._rowcount
             truncateResult = truncateResult # Just to remove "Unused variable" warnings
@@ -157,13 +97,13 @@ def truncateWeekSchedule(mainCursor):
 # Returns true or false as success signal
 def createWeekSchedule(mainCursor):    
     # Get all data from schedule and extra schedule table and assign it to current week's schedule table
-    (normalSelectRan, ifNormalSelectError) = runQuery(mainCursor, QUERY_GET_NORMAL_SCHEDULE_ID)
+    (normalSelectRan, ifNormalSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_NORMAL_SCHEDULE_ID)
     if normalSelectRan:
         normalSelectResult = mainCursor.fetchall()
     else:
         print (ifNormalSelectError)
         return False
-    (extraSelectRan, ifExtraSelectError) = runQuery(mainCursor, QUERY_GET_EXTRA_SCHEDULE_ID)
+    (extraSelectRan, ifExtraSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_EXTRA_SCHEDULE_ID)
     if extraSelectRan:
         extraSelectResult = mainCursor.fetchall()
     else:
@@ -173,16 +113,16 @@ def createWeekSchedule(mainCursor):
     # Generate insert queries
     insertQueries = []
     for i in normalSelectResult:
-        tempquery = QUERY_INSERT_WEEK_SCHEDULE_NORMAL_FORMAT_VALUES.format("(" + str(i[0]) + ")")
+        tempquery = gvs.QUERY_INSERT_WEEK_SCHEDULE_NORMAL_FORMAT_VALUES.format("(" + str(i[0]) + ")")
         insertQueries.append(tempquery)
     for i in extraSelectResult:
-        tempquery = QUERY_INSERT_WEEK_SCHEDULE_EXTRA_FORMAT_VALUES.format("(" + str(i[0]) + ")")
+        tempquery = gvs.QUERY_INSERT_WEEK_SCHEDULE_EXTRA_FORMAT_VALUES.format("(" + str(i[0]) + ")")
         insertQueries.append(tempquery)
     
     # Execute insert queries
     counter = 0 # Will keep count of successful insertions
     for i in insertQueries:
-        (insertRan, ifInsertError) = runQuery(mainCursor, i)
+        (insertRan, ifInsertError) = gvs.runQuery(mainCursor, i)
         if not insertRan:
             print (ifInsertError)
         else:
@@ -193,7 +133,7 @@ def createWeekSchedule(mainCursor):
 # This function will check if the weekly schedule table is not empty
 # Returns True if data is present and False if table is empty
 def isWeekScheduleCreated(mainCursor):
-    (selectRan, ifSelectError) = runQuery(mainCursor, QUERY_GET_WEEK_SCHEDULE)
+    (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_WEEK_SCHEDULE)
     if selectRan:
         entriesInTable = len(mainCursor.fetchall())
     else:
@@ -250,15 +190,15 @@ def getCurrentSlot(DEBUG_TIME_DIFFERENCE):
 # This gets the schedule items from view_normal_schedule and view_extra_schedule based on room id
 # Returns a list of normal and extra schedule items for the main controller to use
 def getScheduleItems(mainCursor, dayOfWeek):
-    normalSelectResult = None
-    normalSelectResult = None
-    (normalSelectRan, ifNormalSelectError) = runQuery(mainCursor, QUERY_GET_NORMAL_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK.format(str(THIS_ROOM), str(dayOfWeek)))
+    normalSelectResult = []
+    extraSelectResult = []
+    (normalSelectRan, ifNormalSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_NORMAL_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK.format(str(gvs.THIS_ROOM), str(dayOfWeek)))
     if normalSelectRan:
         normalSelectResult = mainCursor.fetchall()
     else:
         print (ifNormalSelectError)
     
-    (extraSelectRan, ifExtraSelectError) = runQuery(mainCursor, QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK.format(str(THIS_ROOM), str(dayOfWeek)))
+    (extraSelectRan, ifExtraSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK.format(str(gvs.THIS_ROOM), str(dayOfWeek)))
     if extraSelectRan:
         extraSelectResult = mainCursor.fetchall()
     else:
@@ -275,29 +215,6 @@ def getScheduleItems(mainCursor, dayOfWeek):
     if len(scheduleItems) > 0:
         scheduleItems = sorted(scheduleItems, key=lambda k: k.slot) 
     return scheduleItems
-
-# This function will check if the attendance of a course has been updated
-# Returns -1 if attendance is not updated and a number if it is updated
-def checkAttendanceStatus (mainCursor, activeCourse):
-    tempAttendance = -1
-    (attendanceRan, ifAttendanceError) = runQuery(mainCursor, QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(activeCourse.roomID)))
-    if attendanceRan:
-        tempAttendance = mainCursor.fetchone()[0]
-    else:
-        print (ifAttendanceError)
-    return tempAttendance
-
-# This function will tell if the room status table contains the entry of the active course
-# Returns true if table is updated and false if not
-def isRoomStatusTableUpdated(mainCursor, activeCourse):
-    tableUpdated = False
-    (selectRan, ifSelectError) = runQuery(mainCursor, QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(activeCourse.courseID)))
-    if selectRan:
-        if len(mainCursor.fetchall()) > 0:
-            tableUpdated = True
-    else:
-        print (ifSelectError)
-    return tableUpdated
         
 # This function will turn on the appliances based on the requirements
 # returns a boolean true or false as success signal and an updated object of ScheduleItem (normal or extra)
@@ -305,35 +222,35 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
 
     rightnow = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
     # Check if room status table is updated
-    activeCourse.roomStatusUpdated = isRoomStatusTableUpdated(mainCursor, activeCourse)
+    activeCourse.isRoomStatusTableUpdated(mainCursor)
 
     # If room status table is not updated, run the insert query. OTherwise get attendance
     if activeCourse.roomStatusUpdated:
-        activeCourse.attendance = checkAttendanceStatus(mainCursor, activeCourse)
+        activeCourse.checkAttendanceStatus(mainCursor)
     else:
-        "(room_id, course_id, relay_used, class_date, slot)"
+        activeCourse.calculateRelaysToTurnOn()
+        # Generate values to insert in the format: (room_id, course_id, relay_used, class_date, slot)
         values = "("
-        values += str(activeCourse.roomID) + ","
-        values += str(activeCourse.courseID) + ","
-        values += "None,"
-        values += str(rightnow.date()) + ","
-        values += str(activeCourse) + ","
-
-
+        values += "'" + str(activeCourse.roomID) + "',"
+        values += "'" + str(activeCourse.courseID) + "',"
+        values += "'" + str(activeCourse.relaysOnToString()) + "',"
+        values += "'" + str(rightnow.date()) + "',"
+        values += "'" + str(activeCourse.slot) + "')"
+        
+        # Execute the query
+        (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_ROOM_STATUS_FORMAT_VALUES.format(values))
+        if insertRan:
+            activeCourse.attendance = -1
+            activeCourse.roomStatusUpdated = True
+        else:
+            print (ifInsertError)
     
+    #TODO: Massive todo here (create fucntionality for pin switching and checking which pins are active)
+    return activeCourse
+
 
 # This section is also for debugging purposes only.
-SERVER_DATE_TIME = dt.datetime.now()
-(debugDateRan, ifDebugDateError) = runQuery(mainCursor, utilities.QUERY_GET_DATE_TIME)
-if debugDateRan:
-    SERVER_DATE_TIME = mainCursor.fetchone()[1]
-else:
-    print(ifDebugDateError)
-DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
-rightnow = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
-print(rightnow.date())
-#activeCourse = NormalScheduleItem(10, 1002, 1001, 1001, 3, 1, 2)
-#turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE))
-#print(checkAttendanceStatus(mainCursor, activeCourse))
-# connection.commit()
-# connection.close()
+activeCourse = NormalScheduleItem(10, 1002, 1001, 1001, 3, 1, 2)
+print (vars(turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE)))
+connection.commit()
+connection.close()
