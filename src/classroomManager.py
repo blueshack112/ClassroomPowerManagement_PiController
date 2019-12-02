@@ -116,8 +116,7 @@ while True:
 
     # if there is no course active, turn off the applicances
     if not CURRENT_ACTIVE_COURSE:
-        #TODO: write function for turning GPIO off
-        print ("Turn it all off!")
+        utilities.switchEverythingOff()
     
     time.sleep(1)
     os.system("cls")

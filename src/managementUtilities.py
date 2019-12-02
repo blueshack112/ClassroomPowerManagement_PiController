@@ -1,10 +1,11 @@
 import datetime as dt
+import os
 import mysql.connector as cn
 from operator import itemgetter
 import globalVariablesandFunctions as gvs
 from utilityClasses import NormalScheduleItem
 from utilityClasses import ExtraScheduleItem
-asd = "check"
+import relayController
 
 # This section is only for debugging purposes
 # database connection variables
@@ -16,7 +17,7 @@ dbPassword = "areebafyp"
 dbDatabase = "db_classroom_management"
 #connection and getting cursor
 try:
-    connection = cn.connect(host=offsiteDbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
+    connection = cn.connect(host=dbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
     mainCursor = connection.cursor()
     print("Connected to the server...")
 except Exception as e:
@@ -215,10 +216,17 @@ def getScheduleItems(mainCursor, dayOfWeek):
     if len(scheduleItems) > 0:
         scheduleItems = sorted(scheduleItems, key=lambda k: k.slot) 
     return scheduleItems
-        
+
+# This function will request teh realy controller to switch eerything off
+# It is called when there is not active course
+def switchEverythingOff():
+    relayController.switchOffAll()
+
 # This function will turn on the appliances based on the requirements
 # returns a boolean true or false as success signal and an updated object of ScheduleItem (normal or extra)
 def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
+
+    #TODO: Massive todo here: add functionality to remove previous room_status form table to history table
 
     rightnow = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
     # Check if room status table is updated
@@ -227,6 +235,7 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
     # If room status table is not updated, run the insert query. OTherwise get attendance
     if activeCourse.roomStatusUpdated:
         activeCourse.checkAttendanceStatus(mainCursor)
+        activeCourse.calculateRelaysToTurnOn()
     else:
         activeCourse.attendance = -1
         activeCourse.calculateRelaysToTurnOn()
@@ -245,12 +254,18 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
         else:
             print (ifInsertError)
     
-    #TODO: Massive todo here (create fucntionality for pin switching and checking which pins are active)
+    # This part will switch on relays and update the relaysOn variable
     activeCourse.switchRelays()
+
+    # Executing query to udpate teh relays on variable
+    (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID.format(activeCourse.relaysOnToString(), str(activeCourse.courseID)))
+    if not updateRan:
+        print (ifUpdateError)
     return activeCourse
 
 
 # This section is also for debugging purposes only.
+os.system("clear")
 activeCourse = NormalScheduleItem(10, 1002, 1001, 1001, 3, 1, 2)
 print (vars(turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE)))
 connection.commit()
