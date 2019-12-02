@@ -22,6 +22,7 @@ QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK = "SELECT extra_schedule_i
 
 # for the contents of room status table
 QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID = "SELECT attendance FROM tbl_room_status WHERE course_id = {}"
+QUERY_GET_ROOM_STATUS_FORMAT_COURSEID = "SELECT class_date, room_id, slot, relay_used  FROM tbl_room_status WHERE course_id = {}"
 QUERY_INSERT_ROOM_STATUS_FORMAT_VALUES = "INSERT INTO tbl_room_status (room_id, course_id, relay_used, class_date, slot) VALUES {};"
 QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID = "UPDATE tbl_room_status SET relay_used = '{}' WHERE course_id = {}"
 

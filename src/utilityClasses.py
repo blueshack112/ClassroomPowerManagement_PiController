@@ -6,11 +6,6 @@ This section will contain all the classes used to store data in a structured for
 
 # Class description for normal schedule item
 class NormalScheduleItem:
-    isActive = False
-    relaysToTurnOn = ["None"]
-    relaysOn = ["None"]
-    roomStatusUpdated = False
-    attendance = -1 # -1 means that attendance has not yet arrived
     def __init__(self, scheduleID, teacherID, roomID, courseID, dayOfWeek, slot, classLength):
         self.scheduleID = scheduleID
         self.teacherID = teacherID
@@ -18,6 +13,7 @@ class NormalScheduleItem:
         self.courseID = courseID
         self.dayOfWeek = dayOfWeek
         self.slot = slot
+        self.activeSlot = slot
         self.classLength = classLength
         self.isActive = False
         self.roomStatusUpdated = False
@@ -151,11 +147,6 @@ class NormalScheduleItem:
 
 # Class description for extra schedule item
 class ExtraScheduleItem:
-    isActive = False
-    relaysToTurnOn = ["None"]
-    relaysOn = ["None"]
-    roomStatusUpdated = False
-    attendance = -1 # -1 means that attendance has not yet arrived
     def __init__(self, extraScheduleID, teacherID, roomID, courseID, dayOfWeek, slot, classLength, acceptStatus):
         self.extra_schedule_id = extraScheduleID
         self.teacherID = teacherID
@@ -163,6 +154,7 @@ class ExtraScheduleItem:
         self.courseID = courseID
         self.dayOfWeek = dayOfWeek
         self.slot = slot
+        self.activeSlot = slot
         self.classLength = classLength
         self.acceptStatus = acceptStatus
         self.isActive = False

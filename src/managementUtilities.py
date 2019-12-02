@@ -222,6 +222,13 @@ def getScheduleItems(mainCursor, dayOfWeek):
 def switchEverythingOff():
     relayController.switchOffAll()
 
+# This function checks if slot has moved on but the room_status table is still active on the old one
+# Check if slot on room status is different than activeCourse's active slot
+# If there is a difference, shift the entry to history table and create new entry for new slot
+def adjustForSlotChanges(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE, currentSlot):
+    #TODO: Check funtion description
+
+
 # This function will turn on the appliances based on the requirements
 # returns a boolean true or false as success signal and an updated object of ScheduleItem (normal or extra)
 def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):

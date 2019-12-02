@@ -99,18 +99,23 @@ while True:
             break
         elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 2 and CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT:
             CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+            CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
             CURRENT_ACTIVE_COURSE.isACtive = True
             break
         elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 3 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT):
             CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+            CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
             CURRENT_ACTIVE_COURSE.isACtive = True
             break
         else:
             if i == len(CURRENT_DAY_SCHEDULE_ITEMS)-1:
                 CURRENT_ACTIVE_COURSE = None
-    
+
     # if there is an active course, turn on the applicances
     if CURRENT_ACTIVE_COURSE:
+        #TODO: write function to adjust slot differences
+        if not CURRENT_ACTIVE_COURSE.slot == CURRENT_ACTIVE_COURSE.activeSlot:
+            utlities.adjustForSlotChanges(mainCursor, CURRENT_ACTIVE_COURSE, DEBUG_TIME_DIFFERENCE, CURRENT_SLOT)
         #TODO: write function to turn on the appliances
         print ("Turn it on!")
 
