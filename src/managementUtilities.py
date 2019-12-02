@@ -228,6 +228,7 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
     if activeCourse.roomStatusUpdated:
         activeCourse.checkAttendanceStatus(mainCursor)
     else:
+        activeCourse.attendance = -1
         activeCourse.calculateRelaysToTurnOn()
         # Generate values to insert in the format: (room_id, course_id, relay_used, class_date, slot)
         values = "("
@@ -240,12 +241,12 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
         # Execute the query
         (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_ROOM_STATUS_FORMAT_VALUES.format(values))
         if insertRan:
-            activeCourse.attendance = -1
             activeCourse.roomStatusUpdated = True
         else:
             print (ifInsertError)
     
     #TODO: Massive todo here (create fucntionality for pin switching and checking which pins are active)
+    activeCourse.switchRelays()
     return activeCourse
 
 

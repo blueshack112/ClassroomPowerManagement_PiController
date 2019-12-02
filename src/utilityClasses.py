@@ -1,4 +1,5 @@
 import globalVariablesandFunctions as gvs
+import relayController
 """
 This section will contain all the classes used to store data in a structured format.
 """
@@ -70,6 +71,48 @@ class NormalScheduleItem:
             print (ifAttendanceError)
         self.attendance = tempAttendance
 
+    # This function will switch relay pins on based on the relays that need to turn on
+    # Doesn't return anything, just asks raspberry pi to turn switches on and updates the relaysOn variables
+    def switchRelays(self):
+        relaysToTurnOn = self.relaysToTurnOn
+        relaysOn = []
+        
+        # If no relays need to turn on
+        if relaysToTurnOn[0] == "None":
+            relaysOn = relaysToTurnOn
+            self.relaysOn = relaysOn
+            return
+        
+        for i in relaysToTurnOn:
+            if i == relayController.RELAY_101:
+                relayController.switchOn(relayController.RELAY_101)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_102:
+                relayController.switchOn(relayController.RELAY_102)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_103:
+                relayController.switchOn(relayController.RELAY_103)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_104:
+                relayController.switchOn(relayController.RELAY_104)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_105:
+                relayController.switchOn(relayController.RELAY_105)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_106:
+                relayController.switchOn(relayController.RELAY_106)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_107:
+                relayController.switchOn(relayController.RELAY_107)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_108:
+                relayController.switchOn(relayController.RELAY_108)
+                relaysOn.append(i)
+        relaysOn.sort()
+        self.relaysOn = relaysOn
+            
+            
+
 # Class description for extra schedule item
 class ExtraScheduleItem:
     isActive = False
@@ -138,3 +181,53 @@ class ExtraScheduleItem:
             print (ifAttendanceError)
         self.attendance = tempAttendance
     
+    # This function will check if the attendance of a course has been updated
+    # Returns -1 if attendance is not updated and a number if it is updated
+    def checkAttendanceStatus (self, mainCursor):
+        tempAttendance = -1
+        (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
+        if attendanceRan:
+            tempAttendance = mainCursor.fetchone()[0]
+        else:
+            print (ifAttendanceError)
+        self.attendance = tempAttendance
+
+    # This function will switch relay pins on based on the relays that need to turn on
+    # Doesn't return anything, just asks raspberry pi to turn switches on and updates the relaysOn variables
+    def switchRelays(self):
+        relaysToTurnOn = self.relaysToTurnOn
+        relaysOn = []
+        
+        # If no relays need to turn on
+        if relaysToTurnOn[0] == "None":
+            relaysOn = relaysToTurnOn
+            self.relaysOn = relaysOn
+            return
+        
+        for i in relaysToTurnOn:
+            if i == relayController.RELAY_101:
+                relayController.switchOn(relayController.RELAY_101)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_102:
+                relayController.switchOn(relayController.RELAY_102)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_103:
+                relayController.switchOn(relayController.RELAY_103)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_104:
+                relayController.switchOn(relayController.RELAY_104)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_105:
+                relayController.switchOn(relayController.RELAY_105)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_106:
+                relayController.switchOn(relayController.RELAY_106)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_107:
+                relayController.switchOn(relayController.RELAY_107)
+                relaysOn.append(i)
+            elif i == relayController.RELAY_108:
+                relayController.switchOn(relayController.RELAY_108)
+                relaysOn.append(i)
+        relaysOn.sort()
+        self.relaysOn = relaysOn
