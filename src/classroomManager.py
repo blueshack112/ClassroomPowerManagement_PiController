@@ -115,6 +115,8 @@ while True:
                 break
             else:
                 if i == len(CURRENT_DAY_SCHEDULE_ITEMS)-1:
+                    #TODO: Account for the previous course becoming unactive and turnoff appliances
+                    # Could do that in turnOffAppliances functoin too. Consider...
                     CURRENT_ACTIVE_COURSE = None
 
     # if there is an active course, turn on the applicances
