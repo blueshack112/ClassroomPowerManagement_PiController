@@ -1,6 +1,7 @@
 import mysql.connector as cn
 import datetime as dt
 import managementUtilities as utilities
+import globalVariablesandFunctions as gvs
 import time
 import os
 
@@ -44,7 +45,7 @@ CURRENT_DAY_SCHEDULE_ITEMS = [] # Will contain a list of today's schedule items
 CURRENT_ACTIVE_COURSE = None # Will specify which course is currently active
 
 #get database's date and time mainly for debug purposes
-(debugDateRan, ifDebugDateError) = utilities.runQuery(mainCursor, utilities.QUERY_GET_DATE_TIME)
+(debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
 if debugDateRan:
     SERVER_DATE_TIME = mainCursor.fetchone()[1]
 else:
@@ -59,14 +60,18 @@ CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
 debug = open("debug.log", 'w')
 while True:
     # Update local clock to sync with server clock
-    mainCursor.execute(utilities.QUERY_GET_DATE_TIME)
-    newdate = mainCursor.fetchone()[1]
-    if SERVER_DATE_TIME != newdate:
-        SERVER_DATE_TIME = newdate
-        DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
-        CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
+    (debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
+    if debugDateRan:
+        newdate = mainCursor.fetchone()[1]
+        if SERVER_DATE_TIME != newdate:
+            SERVER_DATE_TIME = newdate
+            DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
+            CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
+        else:
+            CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
     else:
-        CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
+        print(ifDebugDateError)
+    
 
     # If it is the start of the week and weekly schedule table is not updated, add schedule from schedule table to this week's schedule table
     if utilities.isStartOfWeek(DEBUG_TIME_DIFFERENCE) and not WEEK_SCHEDULE_CREATED:
@@ -93,35 +98,36 @@ while True:
 
     # Determine which course is currently active
     for i in range(0, len(CURRENT_DAY_SCHEDULE_ITEMS)):
-        if CURRENT_DAY_SCHEDULE_ITEMS[i].dayOfWeek == CURRENT_DAY_OF_WEEK and CURRENT_DAY_SCHEDULE_ITEMS[i].slot == CURRENT_SLOT:
-            CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
-            CURRENT_ACTIVE_COURSE.isACtive = True
-            break
-        elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 2 and CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT:
-            CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
-            CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
-            CURRENT_ACTIVE_COURSE.isACtive = True
-            break
-        elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 3 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT):
-            CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
-            CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
-            CURRENT_ACTIVE_COURSE.isACtive = True
-            break
-        else:
-            if i == len(CURRENT_DAY_SCHEDULE_ITEMS)-1:
-                CURRENT_ACTIVE_COURSE = None
+        if CURRENT_DAY_SCHEDULE_ITEMS[i].dayOfWeek == CURRENT_DAY_OF_WEEK:
+            if CURRENT_DAY_SCHEDULE_ITEMS[i].slot == CURRENT_SLOT:
+                CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+                CURRENT_ACTIVE_COURSE.isACtive = True
+                break
+            elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 2 and CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT:
+                CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+                CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
+                CURRENT_ACTIVE_COURSE.isACtive = True
+                break
+            elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 3 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT):
+                CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+                CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
+                CURRENT_ACTIVE_COURSE.isACtive = True
+                break
+            else:
+                if i == len(CURRENT_DAY_SCHEDULE_ITEMS)-1:
+                    CURRENT_ACTIVE_COURSE = None
 
     # if there is an active course, turn on the applicances
     if CURRENT_ACTIVE_COURSE:
         #TODO: write function to adjust slot differences
         if not CURRENT_ACTIVE_COURSE.slot == CURRENT_ACTIVE_COURSE.activeSlot:
-            utlities.adjustForSlotChanges(mainCursor, CURRENT_ACTIVE_COURSE, DEBUG_TIME_DIFFERENCE, CURRENT_SLOT)
+            utilities.adjustForSlotChanges(mainCursor, CURRENT_ACTIVE_COURSE, CURRENT_SLOT)
         #TODO: write function to turn on the appliances
         print ("Turn it on!")
 
     # if there is no course active, turn off the applicances
-    if not CURRENT_ACTIVE_COURSE:
-        utilities.switchEverythingOff()
+    # if not CURRENT_ACTIVE_COURSE:
+    #     utilities.switchEverythingOff()
     
     time.sleep(1)
     os.system("cls")

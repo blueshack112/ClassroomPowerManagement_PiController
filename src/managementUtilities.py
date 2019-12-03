@@ -5,7 +5,7 @@ from operator import itemgetter
 import globalVariablesandFunctions as gvs
 from utilityClasses import NormalScheduleItem
 from utilityClasses import ExtraScheduleItem
-import relayController
+#import relayController
 
 # This section is only for debugging purposes
 # database connection variables
@@ -17,7 +17,7 @@ dbPassword = "areebafyp"
 dbDatabase = "db_classroom_management"
 #connection and getting cursor
 try:
-    connection = cn.connect(host=dbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
+    connection = cn.connect(host=offsiteDbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
     mainCursor = connection.cursor()
     print("Connected to the server...")
 except Exception as e:
@@ -219,22 +219,56 @@ def getScheduleItems(mainCursor, dayOfWeek):
 
 # This function will request teh realy controller to switch eerything off
 # It is called when there is not active course
-def switchEverythingOff():
-    relayController.switchOffAll()
+# def switchEverythingOff():
+#     relayController.switchOffAll()
 
 # This function checks if slot has moved on but the room_status table is still active on the old one
 # Check if slot on room status is different than activeCourse's active slot
 # If there is a difference, shift the entry to history table and create new entry for new slot
-def adjustForSlotChanges(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE, currentSlot):
-    #TODO: Check funtion description
+def adjustForSlotChanges(mainCursor, activeCourse, currentSlot):
+    if activeCourse.slot == activeCourse.activeSlot:
+        print ("No slot changes necessary.")
+        return
+
+    (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_COURSEID.format(str(activeCourse.courseID)))
+    if selectRan:
+        selectResult =  mainCursor.fetchone()
+    else:
+        print (ifSelectError)
+    
+    roomStatusDate = str(selectResult[0])
+    roomStatusRoomID = selectResult[1]
+    roomStatusSlot = selectResult[2]
+    roomStatusRelayUsed = selectResult[3]
+    
+    if roomStatusSlot == activeCourse.activeSlot:
+        print ("Slot changes already done.")
+        return
+
+    insertValues = "("
+    insertValues += "'" + roomStatusDate + "',"
+    insertValues += "'" + str(roomStatusRoomID) + "',"
+    insertValues += "'" + str(roomStatusSlot) + "',"
+    insertValues += "'" + roomStatusRelayUsed + "')"
+
+    # Insert current room_status entry to history
+    (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
+    if not insertRan:
+        print(gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
+        print ("insertError")
+        print (ifInsertError)
+        return
+    
+    # Update current room_status entry to next slot
+    (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_SLOT_COURSEID.format(str(activeCourse.activeSlot), str(activeCourse.courseID)))
+    if not updateRan:
+        print (ifUpdateError)
+        return
 
 
 # This function will turn on the appliances based on the requirements
 # returns a boolean true or false as success signal and an updated object of ScheduleItem (normal or extra)
 def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
-
-    #TODO: Massive todo here: add functionality to remove previous room_status form table to history table
-
     rightnow = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
     # Check if room status table is updated
     activeCourse.isRoomStatusTableUpdated(mainCursor)
@@ -262,18 +296,21 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
             print (ifInsertError)
     
     # This part will switch on relays and update the relaysOn variable
-    activeCourse.switchRelays()
+    # activeCourse.switchRelays()
 
-    # Executing query to udpate teh relays on variable
-    (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID.format(activeCourse.relaysOnToString(), str(activeCourse.courseID)))
-    if not updateRan:
-        print (ifUpdateError)
+    # Executing query to udpate the relays on variable
+    # (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID.format(activeCourse.relaysOnToString(), str(activeCourse.courseID)))
+    # if not updateRan:
+        # print (ifUpdateError)
     return activeCourse
 
 
 # This section is also for debugging purposes only.
-os.system("clear")
+CURRENT_SLOT = 1
 activeCourse = NormalScheduleItem(10, 1002, 1001, 1001, 3, 1, 2)
-print (vars(turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE)))
+activeCourse.activeSlot = activeCourse.activeSlot + 1
+
+adjustForSlotChanges(mainCursor, activeCourse, CURRENT_SLOT)
+#print (vars(turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE)))
 connection.commit()
 connection.close()
