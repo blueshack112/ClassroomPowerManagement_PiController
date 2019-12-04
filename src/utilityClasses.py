@@ -1,5 +1,5 @@
 import globalVariablesandFunctions as gvs
-#import relayController
+import relayController
 """
 This section will contain all the classes used to store data in a structured format.
 """
@@ -61,12 +61,7 @@ class NormalScheduleItem:
     def calculateRelaysToTurnOn(self):
         relaysToTurnOn = []
         attendance = self.attendance
-        if attendance <= 10:
-            relaysToTurnOn.append(101)
-            relaysToTurnOn.append(107)
-        relaysToTurnOn.sort()
-        self.relaysToTurnOn = relaysToTurnOn
-    """
+
         # if attendance has not arrived, turn on only eesentials (first row of lights and fans and Front AC)
         if attendance <= 10:
             relaysToTurnOn.append(relayController.RELAY_ROW_1)
@@ -148,7 +143,7 @@ class NormalScheduleItem:
                 relayController.switchOn(relayController.RELAY_108)
                 relaysOn.append(i)
         relaysOn.sort()
-        self.relaysOn = relaysOn     """
+        self.relaysOn = relaysOn
             
 
 # Class description for extra schedule item
@@ -218,12 +213,7 @@ class ExtraScheduleItem:
     def calculateRelaysToTurnOn(self):
         relaysToTurnOn = []
         attendance = self.attendance
-        if attendance <= 10:
-            relaysToTurnOn.append(101)
-            relaysToTurnOn.append(107)
-        relaysToTurnOn.sort()
-        self.relaysToTurnOn = relaysToTurnOn
-    """    
+
         # if attendance has not arrived, turn on only eesentials (first row of lights and fans and Front AC)
         if attendance <= 10:
             relaysToTurnOn.append(relayController.RELAY_ROW_1)
@@ -306,4 +296,3 @@ class ExtraScheduleItem:
                 relaysOn.append(i)
         relaysOn.sort()
         self.relaysOn = relaysOn     
-    """

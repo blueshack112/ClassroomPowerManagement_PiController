@@ -3,6 +3,7 @@ This section will contain all the query templates and
 important variables needed during the running of this file.
 """
 THIS_ROOM = 1001
+DEBUG = True
 # For debugging, get date and time
 QUERY_GET_DATE_TIME = "SELECT debug_id, system_date_time_to_set FROM tbl_debug;"
 
@@ -23,6 +24,8 @@ QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK = "SELECT extra_schedule_i
 # for the contents of room status table
 QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID = "SELECT attendance FROM tbl_room_status WHERE course_id = {};"
 QUERY_GET_ROOM_STATUS_FORMAT_COURSEID = "SELECT class_date, room_id, slot, relay_used  FROM tbl_room_status WHERE course_id = {};"
+QUERY_GET_ROOM_STATUS_FORMAT_ROOMID = "SELECT class_date, room_id, slot, relay_used  FROM tbl_room_status WHERE room_id = {};"
+QUERY_DELETE_ROOM_STATUS_FORMAT_ROOMID = "DELETE FROM tbl_room_status WHERE room_id = {};"
 QUERY_INSERT_ROOM_STATUS_FORMAT_VALUES = "INSERT INTO tbl_room_status (room_id, course_id, relay_used, class_date, slot) VALUES {};"
 QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID = "UPDATE tbl_room_status SET relay_used = '{}' WHERE course_id = {};"
 QUERY_UPDATE_ROOM_STATUS_FORMAT_SLOT_COURSEID = "UPDATE tbl_room_status SET slot = '{}' WHERE course_id = {};"

@@ -37,7 +37,7 @@ while True:
     print (CURRENT_DATE_TIME) #this line will give server time but updated. Time difference must be updated everytime server time changes
 """
 
-# Global variables to keep track of everything
+# Vital variables to keep track of everything
 WEEK_SCHEDULE_CREATED = False
 CURRENT_DAY_OF_WEEK = 0 # 1 is monday and 7 is sunday. We need to perform actions 1 through 5 (Monday to Saturday)
 CURRENT_SLOT = -1 # -1 Means not a slot. 0 means between two sessions(break). 1-7 are usable values.
@@ -45,11 +45,12 @@ CURRENT_DAY_SCHEDULE_ITEMS = [] # Will contain a list of today's schedule items
 CURRENT_ACTIVE_COURSE = None # Will specify which course is currently active
 
 #get database's date and time mainly for debug purposes
-(debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
-if debugDateRan:
-    SERVER_DATE_TIME = mainCursor.fetchone()[1]
-else:
-    print(ifDebugDateError)
+if gvs.DEBUG:
+    (debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
+    if debugDateRan:
+        SERVER_DATE_TIME = mainCursor.fetchone()[1]
+    else:
+        print(ifDebugDateError)
 
 DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
 CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
@@ -59,19 +60,25 @@ CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
 """
 debug = open("debug.log", 'w')
 while True:
-    # Update local clock to sync with server clock
-    (debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
-    if debugDateRan:
-        newdate = mainCursor.fetchone()[1]
-        if SERVER_DATE_TIME != newdate:
-            SERVER_DATE_TIME = newdate
-            DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
-            CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
+    time.sleep(1)
+    os.system("cls")
+    print ("SUMMARY")
+    print ("=========")
+    if gvs.DEBUG:
+        # Update local clock to sync with server clock
+        (debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
+        if debugDateRan:
+            newdate = mainCursor.fetchone()[1]
+            if SERVER_DATE_TIME != newdate:
+                SERVER_DATE_TIME = newdate
+            else:
+                CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
         else:
-            CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
+            print(ifDebugDateError)
     else:
-        print(ifDebugDateError)
-    
+        SERVER_DATE_TIME = dt.datetime.now()
+    DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
+    CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
 
     # If it is the start of the week and weekly schedule table is not updated, add schedule from schedule table to this week's schedule table
     if utilities.isStartOfWeek(DEBUG_TIME_DIFFERENCE) and not WEEK_SCHEDULE_CREATED:
@@ -119,22 +126,19 @@ while True:
                     # Could do that in turnOffAppliances functoin too. Consider...
                     CURRENT_ACTIVE_COURSE = None
 
-    # if there is an active course, turn on the applicances
+    # if there is an active course...
     if CURRENT_ACTIVE_COURSE:
-        #TODO: write function to adjust slot differences
+        # Adjusting slot differences if applicable
         if not CURRENT_ACTIVE_COURSE.slot == CURRENT_ACTIVE_COURSE.activeSlot:
             utilities.adjustForSlotChanges(mainCursor, CURRENT_ACTIVE_COURSE, CURRENT_SLOT)
-        #TODO: write function to turn on the appliances
-        print ("Turn it on!")
+        # Turning on the appliances
+        utilities.turnOnAppliances(mainCursor, CURRENT_ACTIVE_COURSE, DEBUG_TIME_DIFFERENCE)
 
-    # if there is no course active, turn off the applicances
-    # if not CURRENT_ACTIVE_COURSE:
-    #     utilities.switchEverythingOff()
+    # if there is no course active...
+    if not CURRENT_ACTIVE_COURSE:
+        # turn everything off
+        utilities.switchEverythingOff()
     
-    time.sleep(1)
-    os.system("cls")
-    print ("SUMMARY")
-    print ("=========")
     print ("Datetime: " + str(CURRENT_DATE_TIME)[:-7])
     print ("Week schedule created: " + str(WEEK_SCHEDULE_CREATED))
     print ("Day: " + str(CURRENT_DAY_OF_WEEK))
