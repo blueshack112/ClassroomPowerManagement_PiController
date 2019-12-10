@@ -1,5 +1,4 @@
 import RPi.GPIO as GPIO
-from time import sleep
 
 """
 This code is used to switch relays on and off.
@@ -80,6 +79,7 @@ GPIO.setup(RELAY_106, GPIO.OUT)
 GPIO.setup(RELAY_107, GPIO.OUT)
 GPIO.setup(RELAY_108, GPIO.OUT)
 
+
 # Function to switch on a relay
 # Returns true and false as success signals
 def switchOn (relayPin):
@@ -142,6 +142,23 @@ def switchOnAll ():
     if GPIO.input(RELAY_108) == 1:
         switchOn(RELAY_108)
     
+
+"""
+# Dummy function to switch on a relay
+# Returns true and false as success signals
+def switchOn (relayPin):
+    print (str(relayPin) + " switched on!")
+
+# Dummy function to switch on a relay
+# Returns true and false as success signals
+def switchOff (relayPin):
+    print (str(relayPin) + " switched of!")
+
+# Dummy function to switch off all relays
+# Returns true and false as success signals
+def switchOffAll ():
+    print ("Switch all off.")
+"""
 
 # Set all pins to high so the relay switches can be off
 switchOffAll()

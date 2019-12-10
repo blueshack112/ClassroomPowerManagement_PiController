@@ -17,7 +17,7 @@ dbPassword = "areebafyp"
 dbDatabase = "db_classroom_management"
 #connection and getting cursor
 try:
-    connection = cn.connect(host=dbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
+    connection = cn.connect(host=offsiteDbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
     mainCursor = connection.cursor()
     print("Connected to the server...")
 except Exception as e:
@@ -220,21 +220,87 @@ def getScheduleItems(mainCursor, dayOfWeek):
 # This function will request teh realy controller to switch eerything off
 # It is called when there is not active course
 def switchEverythingOff():
+    # Request relayController to switch everything off
     relayController.switchOffAll()
+
+    # Check if there is something on room_sttus table and move it to history table
+    (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_ROOMID.format(str(gvs.THIS_ROOM)))
+    if selectRan:
+        selectResult = mainCursor.fetchone()
+    else:
+        print (ifSelectError)
+    
+    # If there is an entry against this room, send it to history table
+    roomStatusDate = str(selectResult[0])
+    roomStatusRoomID = selectResult[1]
+    roomStatusSlot = selectResult[2]
+    roomStatusRelayUsed = selectResult[3]
+
+    insertValues = "("
+    insertValues += "'" + roomStatusDate + "',"
+    insertValues += "'" + str(roomStatusRoomID) + "',"
+    insertValues += "'" + str(roomStatusSlot) + "',"
+    insertValues += "'" + roomStatusRelayUsed + "')"
+    
+    (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
+    if not insertRan:
+        print (ifInsertError)
+        return
+    
+    # Now remove the entry from room_status table
+    (deleteRan, ifDeleteError) = gvs.runQuery(mainCursor, gvs.QUERY_DELETE_ROOM_STATUS_FORMAT_ROOMID.format(str(gvs.THIS_ROOM)))
+    if not deleteRan:
+        print (ifDeleteError)
+        return
+    print ("-Everything switched off and tables updated.")
 
 # This function checks if slot has moved on but the room_status table is still active on the old one
 # Check if slot on room status is different than activeCourse's active slot
 # If there is a difference, shift the entry to history table and create new entry for new slot
-def adjustForSlotChanges(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE, currentSlot):
-    #TODO: Check funtion description
+def adjustForSlotChanges(mainCursor, activeCourse, currentSlot):
+    if activeCourse.slot == activeCourse.activeSlot:
+        print ("-No slot changes necessary.")
+        return
+
+    (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_COURSEID.format(str(activeCourse.courseID)))
+    if selectRan:
+        selectResult =  mainCursor.fetchone()
+    else:
+        print (ifSelectError)
+    
+    roomStatusDate = str(selectResult[0])
+    roomStatusRoomID = selectResult[1]
+    roomStatusSlot = selectResult[2]
+    roomStatusRelayUsed = selectResult[3]
+    
+    if roomStatusSlot == activeCourse.activeSlot:
+        print ("Slot changes already done.")
+        return
+
+    insertValues = "("
+    insertValues += "'" + roomStatusDate + "',"
+    insertValues += "'" + str(roomStatusRoomID) + "',"
+    insertValues += "'" + str(roomStatusSlot) + "',"
+    insertValues += "'" + roomStatusRelayUsed + "')"
+
+    # Insert current room_status entry to history
+    (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
+    if not insertRan:
+        print(gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
+        print (ifInsertError)
+        return
+    
+    # Update current room_status entry to next slot
+    (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_SLOT_COURSEID.format(str(activeCourse.activeSlot), str(activeCourse.courseID)))
+    if not updateRan:
+        print (ifUpdateError)
+        return
+    print ("-Slot changes made.")
 
 
 # This function will turn on the appliances based on the requirements
 # returns a boolean true or false as success signal and an updated object of ScheduleItem (normal or extra)
 def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
-
-    #TODO: Massive todo here: add functionality to remove previous room_status form table to history table
-
     rightnow = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
     # Check if room status table is updated
     activeCourse.isRoomStatusTableUpdated(mainCursor)
@@ -264,7 +330,7 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
     # This part will switch on relays and update the relaysOn variable
     activeCourse.switchRelays()
 
-    # Executing query to udpate teh relays on variable
+    # Executing query to udpate the relays on variable
     (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID.format(activeCourse.relaysOnToString(), str(activeCourse.courseID)))
     if not updateRan:
         print (ifUpdateError)
@@ -272,8 +338,11 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
 
 
 # This section is also for debugging purposes only.
-os.system("clear")
+CURRENT_SLOT = 2
 activeCourse = NormalScheduleItem(10, 1002, 1001, 1001, 3, 1, 2)
-print (vars(turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE)))
+activeCourse.activeSlot = activeCourse.activeSlot + 1
+#print (vars(turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE)))
+#adjustForSlotChanges(mainCursor, activeCourse, CURRENT_SLOT)
+switchEverythingOff()
 connection.commit()
 connection.close()

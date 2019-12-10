@@ -33,11 +33,35 @@ class NormalScheduleItem:
             relaysList = relaysList[:-1]
             return relaysList
     
+    # This function will tell if the room status table contains the entry of the active course
+    # Returns true if table is updated and false if not
+    def isRoomStatusTableUpdated(self, mainCursor):
+        tableUpdated = False
+        (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
+        if selectRan:
+            if len(mainCursor.fetchall()) > 0:
+                tableUpdated = True
+        else:
+            print (ifSelectError)
+        self.roomStatusUpdated = tableUpdated
+    
+    # This function will check if the attendance of a course has been updated
+    # Returns -1 if attendance is not updated and a number if it is updated
+    def checkAttendanceStatus (self, mainCursor):
+        tempAttendance = -1
+        (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
+        if attendanceRan:
+            tempAttendance = mainCursor.fetchone()[0]
+        else:
+            print (ifAttendanceError)
+        self.attendance = tempAttendance
+
+
     # Calculate which relays to switch on based on attendance information
     def calculateRelaysToTurnOn(self):
         relaysToTurnOn = []
         attendance = self.attendance
-        
+
         # if attendance has not arrived, turn on only eesentials (first row of lights and fans and Front AC)
         if attendance <= 10:
             relaysToTurnOn.append(relayController.RELAY_ROW_1)
@@ -80,29 +104,6 @@ class NormalScheduleItem:
         
         relaysToTurnOn.sort()
         self.relaysToTurnOn = relaysToTurnOn
-    
-    # This function will tell if the room status table contains the entry of the active course
-    # Returns true if table is updated and false if not
-    def isRoomStatusTableUpdated(self, mainCursor):
-        tableUpdated = False
-        (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
-        if selectRan:
-            if len(mainCursor.fetchall()) > 0:
-                tableUpdated = True
-        else:
-            print (ifSelectError)
-        self.roomStatusUpdated = tableUpdated
-    
-    # This function will check if the attendance of a course has been updated
-    # Returns -1 if attendance is not updated and a number if it is updated
-    def checkAttendanceStatus (self, mainCursor):
-        tempAttendance = -1
-        (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
-        if attendanceRan:
-            tempAttendance = mainCursor.fetchone()[0]
-        else:
-            print (ifAttendanceError)
-        self.attendance = tempAttendance
 
     # This function will switch relay pins on based on the relays that need to turn on
     # Doesn't return anything, just asks raspberry pi to turn switches on and updates the relaysOn variables
@@ -142,7 +143,7 @@ class NormalScheduleItem:
                 relayController.switchOn(relayController.RELAY_108)
                 relaysOn.append(i)
         relaysOn.sort()
-        self.relaysOn = relaysOn     
+        self.relaysOn = relaysOn
             
 
 # Class description for extra schedule item
@@ -175,11 +176,44 @@ class ExtraScheduleItem:
             relaysList = relaysList[:-1]
             return relaysList
 
+    # This function will tell if the room status table contains the entry of the active course
+    # Returns true if table is updated and false if not
+    def isRoomStatusTableUpdated(self, mainCursor):
+        tableUpdated = False
+        (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
+        if selectRan:
+            if len(mainCursor.fetchall()) > 0:
+                tableUpdated = True
+        else:
+            print (ifSelectError)
+        self.roomStatusUpdated = tableUpdated
+    
+    # This function will check if the attendance of a course has been updated
+    # Returns -1 if attendance is not updated and a number if it is updated
+    def checkAttendanceStatus (self, mainCursor):
+        tempAttendance = -1
+        (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
+        if attendanceRan:
+            tempAttendance = mainCursor.fetchone()[0]
+        else:
+            print (ifAttendanceError)
+        self.attendance = tempAttendance
+    
+    
+        tempAttendance = -1
+        (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
+        if attendanceRan:
+            tempAttendance = mainCursor.fetchone()[0]
+        else:
+            print (ifAttendanceError)
+        self.attendance = tempAttendance
+
+    
     # Calculate which relays to switch on based on attendance information
     def calculateRelaysToTurnOn(self):
         relaysToTurnOn = []
         attendance = self.attendance
-        
+
         # if attendance has not arrived, turn on only eesentials (first row of lights and fans and Front AC)
         if attendance <= 10:
             relaysToTurnOn.append(relayController.RELAY_ROW_1)
@@ -223,40 +257,6 @@ class ExtraScheduleItem:
         relaysToTurnOn.sort()
         self.relaysToTurnOn = relaysToTurnOn
     
-    # This function will tell if the room status table contains the entry of the active course
-    # Returns true if table is updated and false if not
-    def isRoomStatusTableUpdated(self, mainCursor):
-        tableUpdated = False
-        (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
-        if selectRan:
-            if len(mainCursor.fetchall()) > 0:
-                tableUpdated = True
-        else:
-            print (ifSelectError)
-        self.roomStatusUpdated = tableUpdated
-    
-    # This function will check if the attendance of a course has been updated
-    # Returns -1 if attendance is not updated and a number if it is updated
-    def checkAttendanceStatus (self, mainCursor):
-        tempAttendance = -1
-        (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
-        if attendanceRan:
-            tempAttendance = mainCursor.fetchone()[0]
-        else:
-            print (ifAttendanceError)
-        self.attendance = tempAttendance
-    
-    # This function will check if the attendance of a course has been updated
-    # Returns -1 if attendance is not updated and a number if it is updated
-    def checkAttendanceStatus (self, mainCursor):
-        tempAttendance = -1
-        (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
-        if attendanceRan:
-            tempAttendance = mainCursor.fetchone()[0]
-        else:
-            print (ifAttendanceError)
-        self.attendance = tempAttendance
-
     # This function will switch relay pins on based on the relays that need to turn on
     # Doesn't return anything, just asks raspberry pi to turn switches on and updates the relaysOn variables
     def switchRelays(self):
@@ -296,4 +296,3 @@ class ExtraScheduleItem:
                 relaysOn.append(i)
         relaysOn.sort()
         self.relaysOn = relaysOn     
-    
