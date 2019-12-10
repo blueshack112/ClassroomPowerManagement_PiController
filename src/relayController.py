@@ -123,6 +123,25 @@ def switchOffAll ():
         switchOff(RELAY_107)
     if GPIO.input(RELAY_108) == 0:
         switchOff(RELAY_108)
+
+def switchOnAll ():
+    if GPIO.input(RELAY_101) == 1: # If Pin is on
+        switchOn(RELAY_101)
+    if GPIO.input(RELAY_102) == 1:
+        switchOn(RELAY_102)
+    if GPIO.input(RELAY_103) == 1:
+        switchOn(RELAY_103)
+    if GPIO.input(RELAY_104) == 1:
+        switchOn(RELAY_104)
+    if GPIO.input(RELAY_105) == 1:
+        switchOn(RELAY_105)
+    if GPIO.input(RELAY_106) == 1:
+        switchOn(RELAY_106)
+    if GPIO.input(RELAY_107) == 1:
+        switchOn(RELAY_107)
+    if GPIO.input(RELAY_108) == 1:
+        switchOn(RELAY_108)
     
+
 # Set all pins to high so the relay switches can be off
 switchOffAll()
