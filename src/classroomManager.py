@@ -2,30 +2,22 @@ import mysql.connector as cn
 import datetime as dt
 import managementUtilities as utilities
 import globalVariablesandFunctions as gvs
+import relayController
 import time
 import os
 
-# database connection variables
-dbHost = "192.168.18.4"
-offsiteDbHost = "localhost"
-dbPort = "3306"
-dbUsername = "areeba"
-dbPassword = "areebafyp"
-dbDatabase = "db_classroom_management"
+# Database connection variables
+dbConnected = False
+mainCursor = None
+connection = None
 
-#connection and getting cursor
-try:
-    connection = cn.connect(host=offsiteDbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
-    mainCursor = connection.cursor()
-    print("Connected to the server...")
-except Exception as e:
-    print("Could not connect to the server, exiting...")
-    print (e)
-    exit()
+# Connect to database
+(dbConnected, connection, mainCursor) = utilities.connectToDatabase()
 
 # Get starting system date and time
 START_DATE_TIME = dt.datetime.now()
 SERVER_DATE_TIME = START_DATE_TIME
+DEBUG_TIME_DIFFERENCE = START_DATE_TIME - SERVER_DATE_TIME
 
 """
 # Change current date and time to server's defined date ad time.
@@ -39,45 +31,31 @@ while True:
 
 # Vital variables to keep track of everything
 WEEK_SCHEDULE_CREATED = False
-CURRENT_DAY_OF_WEEK = 0 # 1 is monday and 7 is sunday. We need to perform actions 1 through 5 (Monday to Saturday)
-CURRENT_SLOT = -1 # -1 Means not a slot. 0 means between two sessions(break). 1-7 are usable values.
-CURRENT_DAY_SCHEDULE_ITEMS = [] # Will contain a list of today's schedule items
-CURRENT_ACTIVE_COURSE = None # Will specify which course is currently active
+CURRENT_DAY_OF_WEEK = 0             # 1 is monday and 7 is sunday. We need to perform actions 1 through 5 (Monday to Saturday)
+CURRENT_SLOT = -1                   # -1 Means not a slot. 0 means between two sessions(break). 1-7 are usable values.
+CURRENT_DAY_SCHEDULE_ITEMS = []     # Will contain a list of today's schedule items
+CURRENT_ACTIVE_COURSE = None        # Will specify which course is currently active
 
-#get database's date and time mainly for debug purposes
-if gvs.DEBUG:
-    (debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
-    if debugDateRan:
-        SERVER_DATE_TIME = mainCursor.fetchone()[1]
-    else:
-        print(ifDebugDateError)
-
-DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
+# Get server's date time
+(DEBUG_TIME_DIFFERENCE, SERVER_DATE_TIME) = utilities.getDebugTimeDifference(SERVER_DATE_TIME, DEBUG_TIME_DIFFERENCE, mainCursor)
 CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
+
 """
 - This is the main loop.
 - It will be running every second the whole day and all major function will be performed here.
 """
-debug = open("debug.log", 'w')
 while True:
-    time.sleep(1)
-    os.system("cls")
+    # Check if connection is still open or not
+    if not connection.is_connected():
+        dbConnected = False
+        (dbConnected, connection) = utilities.connectToDatabase()
+
+    os.system("clear")
     print ("SUMMARY")
     print ("=========")
-    if gvs.DEBUG:
-        # Update local clock to sync with server clock
-        (debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
-        if debugDateRan:
-            newdate = mainCursor.fetchone()[1]
-            if SERVER_DATE_TIME != newdate:
-                SERVER_DATE_TIME = newdate
-            else:
-                CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
-        else:
-            print(ifDebugDateError)
-    else:
-        SERVER_DATE_TIME = dt.datetime.now()
-    DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
+
+    # Update date time if it was changed
+    (DEBUG_TIME_DIFFERENCE, SERVER_DATE_TIME) = utilities.getDebugTimeDifference(SERVER_DATE_TIME, DEBUG_TIME_DIFFERENCE, mainCursor)
     CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
 
     # If it is the start of the week and weekly schedule table is not updated, add schedule from schedule table to this week's schedule table
@@ -92,14 +70,15 @@ while True:
     elif utilities.isEndOfWeek(DEBUG_TIME_DIFFERENCE):
         WEEK_SCHEDULE_CREATED = utilities.isWeekScheduleCreated(mainCursor)
     
-    # Calculate current day of week and slot
+    # Calculate current day of week
     CURRENT_DAY_OF_WEEK = CURRENT_DATE_TIME.weekday() + 1
-    tempSlot = utilities.getCurrentSlot(DEBUG_TIME_DIFFERENCE)
+
+    # Calculate current slot
     # If the function says its break time (by returning 0) keep the same slot
+    tempSlot = utilities.getCurrentSlot(DEBUG_TIME_DIFFERENCE)
     if not tempSlot == 0:
         CURRENT_SLOT = tempSlot
     
-
     # Get today's schedule items from the database
     CURRENT_DAY_SCHEDULE_ITEMS = utilities.getScheduleItems(mainCursor, CURRENT_DAY_OF_WEEK)
 
@@ -122,42 +101,48 @@ while True:
                 break
             else:
                 if i == len(CURRENT_DAY_SCHEDULE_ITEMS)-1:
-                    #TODO: Account for the previous course becoming unactive and turnoff appliances
-                    # Could do that in turnOffAppliances functoin too. Consider...
                     CURRENT_ACTIVE_COURSE = None
 
     # if there is an active course...
     if CURRENT_ACTIVE_COURSE:
+        CURRENT_ACTIVE_COURSE.isActive = True
         # Adjusting slot differences if applicable
         if not CURRENT_ACTIVE_COURSE.slot == CURRENT_ACTIVE_COURSE.activeSlot:
             utilities.adjustForSlotChanges(mainCursor, CURRENT_ACTIVE_COURSE, CURRENT_SLOT)
-        # Turning on the appliances
+        # Turn on the appliances
         utilities.turnOnAppliances(mainCursor, CURRENT_ACTIVE_COURSE, DEBUG_TIME_DIFFERENCE)
 
-    # if there is no course active...
+    # If there is no course active...
     if not CURRENT_ACTIVE_COURSE:
-        # turn everything off
-        utilities.switchEverythingOff()
+        # Switch everything off
+        utilities.switchEverythingOff(mainCursor)
     
+    # Reporting at the end of the loop
     print ("Datetime: " + str(CURRENT_DATE_TIME)[:-7])
     print ("Week schedule created: " + str(WEEK_SCHEDULE_CREATED))
     print ("Day: " + str(CURRENT_DAY_OF_WEEK))
     print ("Slot: " + str(CURRENT_SLOT))
+    print ("Relays on right now: " + relayController.whichRelaysAreOn())
+
     if CURRENT_ACTIVE_COURSE:
-        print ("Current active course: " + str(CURRENT_ACTIVE_COURSE.courseID))
+        print ("\n\nCurrent active course:")
+        print ("\tCourse ID: " + str(CURRENT_ACTIVE_COURSE.courseID) + "   Teacher ID: " + str(CURRENT_ACTIVE_COURSE.teacherID) + "   Room ID: " + str(CURRENT_ACTIVE_COURSE.roomID) + "   Active Status: " + str(CURRENT_ACTIVE_COURSE.isActive) + "   Attendance: " + str(CURRENT_ACTIVE_COURSE.attendance) + "   Relays On: " + CURRENT_ACTIVE_COURSE.relaysOnToString() + "   Slot: " + str(CURRENT_ACTIVE_COURSE.slot) + "   Length: " + str(CURRENT_ACTIVE_COURSE.classLength))
     else:
-        print ("Current active course: None")
-    print ("Today's schedule: ")
+        print ("\n\nCurrent active course: None")
+    
+
+    print ("\nToday's schedule: ")
     for i in CURRENT_DAY_SCHEDULE_ITEMS:
-        print (vars(i))
+        print ("\tCourse ID: " + str(i.courseID) + "   Teacher ID: " + str(i.teacherID) + "   Room ID: " + str(i.roomID), end = '')
+        print ("   Slot: " + str(i.slot) + "   Length: " + str(i.classLength))
+    print('\033[0;0H')
+    time.sleep(0.5)
     
 
     # Commit whatever changes were made during the loop
     connection.commit()
 
 #Close everything (probably not going to occur)
-debug = open("debug.log", 'w')
-debug.close()
 if connection.is_connected():
     connection.close()
     print("Disconnected from the server...")

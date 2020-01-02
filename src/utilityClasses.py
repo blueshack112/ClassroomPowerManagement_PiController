@@ -39,7 +39,8 @@ class NormalScheduleItem:
         tableUpdated = False
         (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
         if selectRan:
-            if len(mainCursor.fetchall()) > 0:
+            selectResult = mainCursor.fetchall()
+            if len(selectResult) > 0:
                 tableUpdated = True
         else:
             print (ifSelectError)
@@ -117,6 +118,7 @@ class NormalScheduleItem:
             self.relaysOn = relaysOn
             return
         
+        relayController.switchOffAll()
         for i in relaysToTurnOn:
             if i == relayController.RELAY_ROW_1:
                 relayController.switchOn(relayController.RELAY_101)

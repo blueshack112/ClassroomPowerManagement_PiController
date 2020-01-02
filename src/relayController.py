@@ -105,7 +105,6 @@ def switchOff (relayPin):
             return False
 
 # Function to switch off all relays
-# Returns true and false as success signals
 def switchOffAll ():
     if GPIO.input(RELAY_101) == 0: # If Pin is on
         switchOff(RELAY_101)
@@ -124,8 +123,9 @@ def switchOffAll ():
     if GPIO.input(RELAY_108) == 0:
         switchOff(RELAY_108)
 
+# Function to switch on all relays
 def switchOnAll ():
-    if GPIO.input(RELAY_101) == 1: # If Pin is on
+    if GPIO.input(RELAY_101) == 1: # If Pin is off
         switchOn(RELAY_101)
     if GPIO.input(RELAY_102) == 1:
         switchOn(RELAY_102)
@@ -141,7 +141,30 @@ def switchOnAll ():
         switchOn(RELAY_107)
     if GPIO.input(RELAY_108) == 1:
         switchOn(RELAY_108)
+
+# Fucntion which returns a string of all the relays that are switched on at the moment of calling the function
+def whichRelaysAreOn():
+    onRelays = "|"
+    if GPIO.input(RELAY_101) == 0: # If Pin is off
+        onRelays += "101|"
+    if GPIO.input(RELAY_102) == 0:
+        onRelays += "102|"
+    if GPIO.input(RELAY_103) == 0:
+        onRelays += "103|"
+    if GPIO.input(RELAY_104) == 0:
+        onRelays += "104|"
+    if GPIO.input(RELAY_105) == 0:
+        onRelays += "105|"
+    if GPIO.input(RELAY_106) == 0:
+        onRelays += "106|"
+    if GPIO.input(RELAY_107) == 0:
+        onRelays += "107|"
+    if GPIO.input(RELAY_108) == 0:
+        onRelays += "108|"
     
+    if len(onRelays) == 1:
+        onRelays = "None"
+    return onRelays
 
 """
 # Dummy function to switch on a relay

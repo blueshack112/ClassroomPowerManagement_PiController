@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+import time
 import mysql.connector as cn
 from operator import itemgetter
 import globalVariablesandFunctions as gvs
@@ -7,7 +8,8 @@ from utilityClasses import NormalScheduleItem
 from utilityClasses import ExtraScheduleItem
 import relayController
 
-# This section is only for debugging purposes
+
+"""# This section is only for debugging purposes
 # database connection variables
 dbHost = "192.168.18.4"
 offsiteDbHost = "localhost"
@@ -32,11 +34,61 @@ if debugDateRan:
 else:
     print(ifDebugDateError)
 DEBUG_TIME_DIFFERENCE = dt.datetime.now() - SERVER_DATE_TIME
+"""
 
 
 """
 This section will contain all the function used by the main file.
 """
+# Database connection variables
+dbHost = "192.168.18.4"
+offsiteDbHost = "localhost"
+dbPort = "3306"
+dbUsername = "areeba"
+dbPassword = "areebafyp"
+dbDatabase = "db_classroom_management"
+
+# Funtion that connects to the server and returns the connection and mainCursor object
+# Returns a tuple of True or False as success signals and a connection variable
+def connectToDatabase():
+    connection = None
+    isConnected = False
+    # Database connection and getting cursor
+    while not isConnected:
+        try:
+            connection = cn.connect(host=dbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
+            mainCursor = connection.cursor()
+            print("Connected to the server...")
+            isConnected = True
+            return isConnected, connection, mainCursor
+        except Exception as e:
+            print (e)
+            print("Could not connect to the server, retrying in 5 seconds...")
+            time.sleep(5)
+
+# Funtion that connects to the server and returns the server's date time and time difference
+# Returns a tuple of timedifference and the server's date time
+def getDebugTimeDifference(previousServerDateTime, previousTimeDifference, mainCursor):
+    timeDifference = None
+    serverDateTime = None
+    # If we are debugging
+    if gvs.DEBUG:
+        # Update local clock to sync with server clock
+        (debugDateRan, ifDebugDateError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_DATE_TIME)
+        if debugDateRan:
+            newdate = mainCursor.fetchone()[1]
+            if previousServerDateTime != newdate:
+                serverDateTime = newdate
+            else:
+                return previousTimeDifference, previousServerDateTime
+        else:
+            print(ifDebugDateError)
+            serverDateTime = previousServerDateTime
+    else:
+        serverDateTime = dt.datetime.now()
+    
+    timeDifference = dt.datetime.now() - serverDateTime
+    return timeDifference, serverDateTime
 
 # Function that checks it right now is the start of the week
 # Returns true or false
@@ -219,27 +271,30 @@ def getScheduleItems(mainCursor, dayOfWeek):
 
 # This function will request teh realy controller to switch eerything off
 # It is called when there is not active course
-def switchEverythingOff():
+def switchEverythingOff(mainCursor):
     # Request relayController to switch everything off
     relayController.switchOffAll()
 
-    # Check if there is something on room_sttus table and move it to history table
+    # Check if there is something on room_status table and move it to history table
     (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_ROOMID.format(str(gvs.THIS_ROOM)))
     if selectRan:
-        selectResult = mainCursor.fetchone()
+        selectResult = mainCursor.fetchall()
+        if len(selectResult) == 0:
+            return
+        selectResult = selectResult[0]
     else:
         print (ifSelectError)
     
     # If there is an entry against this room, send it to history table
     roomStatusDate = str(selectResult[0])
-    roomStatusRoomID = selectResult[1]
-    roomStatusSlot = selectResult[2]
-    roomStatusRelayUsed = selectResult[3]
+    roomStatusRoomID = str(selectResult[1])
+    roomStatusSlot = str(selectResult[2])
+    roomStatusRelayUsed = str(selectResult[3])
 
     insertValues = "("
     insertValues += "'" + roomStatusDate + "',"
-    insertValues += "'" + str(roomStatusRoomID) + "',"
-    insertValues += "'" + str(roomStatusSlot) + "',"
+    insertValues += "'" + roomStatusRoomID + "',"
+    insertValues += "'" + roomStatusSlot + "',"
     insertValues += "'" + roomStatusRelayUsed + "')"
     
     (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
@@ -264,7 +319,13 @@ def adjustForSlotChanges(mainCursor, activeCourse, currentSlot):
 
     (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_COURSEID.format(str(activeCourse.courseID)))
     if selectRan:
-        selectResult =  mainCursor.fetchone()
+        selectResult =  mainCursor.fetchall()
+        if len(selectResult) == 0:
+            print ("-No slot changes necessary.")
+            return
+        else:
+            selectResult = selectResult[0]
+
     else:
         print (ifSelectError)
     
@@ -310,6 +371,40 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
         activeCourse.checkAttendanceStatus(mainCursor)
         activeCourse.calculateRelaysToTurnOn()
     else:
+        # Check if there is an entry and move it to history table (There will be the entry of older course)
+        (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_ROOMID.format(str(gvs.THIS_ROOM)))
+        if selectRan:
+            selectResult = mainCursor.fetchall()
+            if not len(selectResult) == 0:
+                selectResult = selectResult[0]
+                # If there is an entry against this room, send it to history table
+                roomStatusDate = str(selectResult[0])
+                roomStatusRoomID = str(selectResult[1])
+                roomStatusSlot = str(selectResult[2])
+                roomStatusRelayUsed = str(selectResult[3])
+
+                insertValues = "("
+                insertValues += "'" + roomStatusDate + "',"
+                insertValues += "'" + roomStatusRoomID + "',"
+                insertValues += "'" + roomStatusSlot + "',"
+                insertValues += "'" + roomStatusRelayUsed + "')"
+
+                (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
+                if not insertRan:
+                    print (ifInsertError)
+                    return
+    
+                # Now remove the entry from room_status table
+                (deleteRan, ifDeleteError) = gvs.runQuery(mainCursor, gvs.QUERY_DELETE_ROOM_STATUS_FORMAT_ROOMID.format(str(gvs.THIS_ROOM)))
+                if not deleteRan:
+                    print (ifDeleteError)
+                    return
+
+        else:
+            print ("Error selecting: (turnOnAppliances)")
+            print (ifSelectError)
+            return
+
         activeCourse.attendance = -1
         activeCourse.calculateRelaysToTurnOn()
         # Generate values to insert in the format: (room_id, course_id, relay_used, class_date, slot)
@@ -338,11 +433,11 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
 
 
 # This section is also for debugging purposes only.
-CURRENT_SLOT = 2
-activeCourse = NormalScheduleItem(10, 1002, 1001, 1001, 3, 1, 2)
-activeCourse.activeSlot = activeCourse.activeSlot + 1
+#CURRENT_SLOT = 2
+#activeCourse = NormalScheduleItem(10, 1002, 1001, 1001, 3, 1, 2)
+#activeCourse.activeSlot = activeCourse.activeSlot + 1
 #print (vars(turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE)))
 #adjustForSlotChanges(mainCursor, activeCourse, CURRENT_SLOT)
-switchEverythingOff()
-connection.commit()
-connection.close()
+#switchEverythingOff()
+#connection.commit()
+#connection.close()

@@ -4,6 +4,7 @@ important variables needed during the running of this file.
 """
 THIS_ROOM = 1001
 DEBUG = True
+
 # For debugging, get date and time
 QUERY_GET_DATE_TIME = "SELECT debug_id, system_date_time_to_set FROM tbl_debug;"
 
