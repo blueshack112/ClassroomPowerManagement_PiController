@@ -1,3 +1,4 @@
+import mysql.connector as cn
 import globalVariablesandFunctions as gvs
 import relayController
 """
@@ -150,7 +151,7 @@ class NormalScheduleItem:
 
 # Class description for extra schedule item
 class ExtraScheduleItem:
-    def __init__(self, extraScheduleID, teacherID, roomID, courseID, dayOfWeek, slot, classLength, acceptStatus):
+    def __init__(self, extraScheduleID, teacherID, roomID, courseID, dayOfWeek, slot, classLength, acceptStatus, requestType, message):
         self.extra_schedule_id = extraScheduleID
         self.teacherID = teacherID
         self.roomID = roomID
@@ -160,6 +161,8 @@ class ExtraScheduleItem:
         self.activeSlot = slot
         self.classLength = classLength
         self.acceptStatus = acceptStatus
+        self.requestType = requestType
+        self.message = message
         self.isActive = False
         self.roomStatusUpdated = False
         self.attendance = -1
@@ -182,7 +185,10 @@ class ExtraScheduleItem:
     # Returns true if table is updated and false if not
     def isRoomStatusTableUpdated(self, mainCursor):
         tableUpdated = False
-        (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
+        if str(self.courseID) == 'None':
+            (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(-1)))            
+        else:
+            (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
         if selectRan:
             if len(mainCursor.fetchall()) > 0:
                 tableUpdated = True
@@ -200,21 +206,28 @@ class ExtraScheduleItem:
         else:
             print (ifAttendanceError)
         self.attendance = tempAttendance
-    
-    
-        tempAttendance = -1
-        (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
-        if attendanceRan:
-            tempAttendance = mainCursor.fetchone()[0]
-        else:
-            print (ifAttendanceError)
-        self.attendance = tempAttendance
 
     
     # Calculate which relays to switch on based on attendance information
     def calculateRelaysToTurnOn(self):
         relaysToTurnOn = []
         attendance = self.attendance
+
+        # If this is an HOD override schedule item, then get the relays to turn on form the message
+        if self.requestType == 'HOD':
+            message = self.message
+            
+            temprelays = []
+            while (',' in message):
+                temprelays.append(int(message[:message.index(',')]))
+                message = message[message.index(',')+1:]
+            temprelays.append(int(message))
+
+            # Assign to the class variable
+            self.relaysToTurnOn = temprelays
+            return
+            
+
 
         # if attendance has not arrived, turn on only eesentials (first row of lights and fans and Front AC)
         if attendance <= 10:
@@ -298,3 +311,42 @@ class ExtraScheduleItem:
                 relaysOn.append(i)
         relaysOn.sort()
         self.relaysOn = relaysOn     
+
+# TODO: find the query problem here
+"""DEBUG"""
+"""
+# Database connection variables
+dbHost = "192.168.18.4"
+offsiteDbHost = "localhost"
+dbPort = "3306"
+dbUsername = "areeba"
+dbPassword = "areebafyp"
+dbDatabase = "db_classroom_management"
+#connection and getting cursor
+try:
+    connection = cn.connect(host=dbHost, user=dbUsername, passwd=dbPassword, database=dbDatabase)
+    mainCursor = connection.cursor()
+    print("Connected to the server...")
+except Exception as e:
+    print (e)
+    exit()
+
+extraSelectResult = []
+(extraSelectRan, ifExtraSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK.format(str(gvs.THIS_ROOM), 5))
+if extraSelectRan:
+    extraSelectResult = mainCursor.fetchall()
+else:
+    print (ifExtraSelectError)
+scheduleItems = []
+for i in extraSelectResult:
+    print (i[0])
+    temp = ExtraScheduleItem(i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9])
+    scheduleItems.append(temp)
+if len(scheduleItems) > 0:
+    scheduleItems = sorted(scheduleItems, key=lambda k: k.slot) 
+
+import os
+os.system('clear')
+scheduleItems[1].calculateRelaysToTurnOn()
+print(scheduleItems[1].relaysToTurnOn)
+"""

@@ -99,9 +99,33 @@ while True:
                 CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
                 CURRENT_ACTIVE_COURSE.isACtive = True
                 break
+            elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 4 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+3 == CURRENT_SLOT):
+                CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+                CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
+                CURRENT_ACTIVE_COURSE.isACtive = True
+                break
+            elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 5 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+3 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+4 == CURRENT_SLOT):
+                CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+                CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
+                CURRENT_ACTIVE_COURSE.isACtive = True
+                break
+            elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 6 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+3 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+4 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+5 == CURRENT_SLOT):
+                CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+                CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
+                CURRENT_ACTIVE_COURSE.isACtive = True
+                break
+            elif CURRENT_DAY_SCHEDULE_ITEMS[i].classLength == 7 and (CURRENT_DAY_SCHEDULE_ITEMS[i].slot+1 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+2 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+3 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+4 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+5 == CURRENT_SLOT or CURRENT_DAY_SCHEDULE_ITEMS[i].slot+6 == CURRENT_SLOT):
+                CURRENT_ACTIVE_COURSE = CURRENT_DAY_SCHEDULE_ITEMS[i]
+                CURRENT_ACTIVE_COURSE.activeSlot = CURRENT_SLOT
+                CURRENT_ACTIVE_COURSE.isACtive = True
+                break            
             else:
                 if i == len(CURRENT_DAY_SCHEDULE_ITEMS)-1:
                     CURRENT_ACTIVE_COURSE = None
+    
+    # if no scedule today
+    if len(CURRENT_DAY_SCHEDULE_ITEMS) == 0:
+        CURRENT_ACTIVE_COURSE = None
 
     # if there is an active course...
     if CURRENT_ACTIVE_COURSE:
@@ -137,8 +161,9 @@ while True:
         print ("   Slot: " + str(i.slot) + "   Length: " + str(i.classLength))
     print('\033[0;0H')
     time.sleep(0.5)
-    
-
+    # long sleep
+    # TODO: remove it
+    time.sleep(3)
     # Commit whatever changes were made during the loop
     connection.commit()
 

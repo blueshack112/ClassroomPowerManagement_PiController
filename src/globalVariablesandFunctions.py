@@ -9,7 +9,7 @@ DEBUG = True
 QUERY_GET_DATE_TIME = "SELECT debug_id, system_date_time_to_set FROM tbl_debug;"
 
 # for the contents of current week's table
-QUERY_GET_WEEK_SCHEDULE = "SELECT week_schedule_id, schedule_id, extra_schedule_id FROM tbl_week_schedule;"
+QUERY_GET_WEEK_SCHEDULE = "SELECT week_schedule_id, schedule_id FROM tbl_week_schedule;"
 QUERY_INSERT_WEEK_SCHEDULE_NORMAL_FORMAT_VALUES = "INSERT INTO tbl_week_schedule (schedule_id) VALUES {};"
 QUERY_INSERT_WEEK_SCHEDULE_EXTRA_FORMAT_VALUES = "INSERT INTO tbl_week_schedule (extra_schedule_id) VALUES {};"
 QUERY_TRUNCATE_WEEK_SCHEDULE = "TRUNCATE TABLE tbl_week_schedule;"
@@ -20,7 +20,7 @@ QUERY_GET_EXTRA_SCHEDULE_ID = "SELECT extra_schedule_id FROM tbl_extra_schedule;
 
 # Select query for views needed to alot schedule items
 QUERY_GET_NORMAL_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK = "SELECT schedule_id, teacher_id, room_id, course_id, day_of_week, slot, class_length FROM view_normal_schedule WHERE room_id = {} and day_of_week = {};"
-QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK = "SELECT extra_schedule_id, teacher_id, room_id, course_id, day_of_week, slot, class_length, accept_status FROM view_extra_schedule WHERE room_id = {} and day_of_week = {};"
+QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK = "SELECT extra_schedule_id, teacher_id, room_id, course_id, day_of_week, slot, class_length, accept_status, request_type, message FROM view_extra_schedule WHERE room_id = {} and day_of_week = {};"
 
 # for the contents of room status table
 QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID = "SELECT attendance FROM tbl_room_status WHERE course_id = {};"

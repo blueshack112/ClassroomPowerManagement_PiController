@@ -82,6 +82,7 @@ def getDebugTimeDifference(previousServerDateTime, previousTimeDifference, mainC
             else:
                 return previousTimeDifference, previousServerDateTime
         else:
+            print ("getDebugTimeDifference: ")
             print(ifDebugDateError)
             serverDateTime = previousServerDateTime
     else:
@@ -119,25 +120,36 @@ def isEndOfWeek(DEBUG_TIME_DIFFERENCE):
     else:
         return False
 
-# Fcuntion that will delete all entries from current week's table
+# Fcuntion that will delete all entries from current week's table and extra schedule table
 # Returns true or false as success signal
 def truncateWeekSchedule(mainCursor):
-    #Run select query and get result if there was no error    
-    (queryRan, ifError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_WEEK_SCHEDULE)
-    if queryRan:
-        result = mainCursor.fetchall()
+    # Run select normal query and get result if there was no error
+    (normalQueryRan, ifNormalError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_WEEK_SCHEDULE)
+    if normalQueryRan:
+        normalResult = mainCursor.fetchall()
     else:
-        print (ifError + " here.")
+        print ("truncateWeekSchedule-1: ")
+        print (ifNormalError)
         return False
+
+    # # Run select normal query and get result if there was no error
+    # (extraQueryRan, ifError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_WEEK_SCHEDULE)
+    # if extraQueryRan:
+    #     result = mainCursor.fetchall()
+    # else:
+    #     print ("truncateWeekSchedule-2: ")
+    #     print (ifError)
+    #     return False
     
     # Truncate Table if their are entries present else return True
-    entriesInTable = len(result)
+    entriesInTable = len(normalResult)
     if entriesInTable > 0:
         (truncateQueryRan, ifTruncateError) = gvs.runQuery(mainCursor, gvs.QUERY_TRUNCATE_WEEK_SCHEDULE)
         if truncateQueryRan:
             truncateResult = mainCursor._rowcount
             truncateResult = truncateResult # Just to remove "Unused variable" warnings
         else:
+            print ("truncateWeekSchedule-3: ")
             print (ifTruncateError)
             return False
     else: 
@@ -149,18 +161,13 @@ def truncateWeekSchedule(mainCursor):
 # Fcuntion that will get all entries from schedule and put them in current week's table
 # Returns true or false as success signal
 def createWeekSchedule(mainCursor):    
-    # Get all data from schedule and extra schedule table and assign it to current week's schedule table
+    # Get all data from normal schedule and assign it to current week's schedule table
     (normalSelectRan, ifNormalSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_NORMAL_SCHEDULE_ID)
     if normalSelectRan:
         normalSelectResult = mainCursor.fetchall()
     else:
+        print ("createWeekSchedule-1: ")
         print (ifNormalSelectError)
-        return False
-    (extraSelectRan, ifExtraSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_EXTRA_SCHEDULE_ID)
-    if extraSelectRan:
-        extraSelectResult = mainCursor.fetchall()
-    else:
-        print (ifExtraSelectError)
         return False
 
     # Generate insert queries
@@ -168,15 +175,13 @@ def createWeekSchedule(mainCursor):
     for i in normalSelectResult:
         tempquery = gvs.QUERY_INSERT_WEEK_SCHEDULE_NORMAL_FORMAT_VALUES.format("(" + str(i[0]) + ")")
         insertQueries.append(tempquery)
-    for i in extraSelectResult:
-        tempquery = gvs.QUERY_INSERT_WEEK_SCHEDULE_EXTRA_FORMAT_VALUES.format("(" + str(i[0]) + ")")
-        insertQueries.append(tempquery)
     
     # Execute insert queries
     counter = 0 # Will keep count of successful insertions
     for i in insertQueries:
         (insertRan, ifInsertError) = gvs.runQuery(mainCursor, i)
         if not insertRan:
+            print ("createWeekSchedule-2: ")
             print (ifInsertError)
         else:
             counter = counter + 1
@@ -190,6 +195,7 @@ def isWeekScheduleCreated(mainCursor):
     if selectRan:
         entriesInTable = len(mainCursor.fetchall())
     else:
+        print ("isWeekScheduleCreated: ")
         print (ifSelectError)
         return False
     
@@ -249,19 +255,22 @@ def getScheduleItems(mainCursor, dayOfWeek):
     if normalSelectRan:
         normalSelectResult = mainCursor.fetchall()
     else:
+        print ("getScheduleItems-1: ")
         print (ifNormalSelectError)
     
     (extraSelectRan, ifExtraSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_EXTRA_SCHEDULE_ROOM_FORMAT_ROOMID_DAYOFWEEK.format(str(gvs.THIS_ROOM), str(dayOfWeek)))
     if extraSelectRan:
         extraSelectResult = mainCursor.fetchall()
     else:
+        print ("getScheduleItems-2: ")
         print (ifExtraSelectError)
+    
     scheduleItems = []
     for i in normalSelectResult:
         temp = NormalScheduleItem(i[0], i[1], i[2], i[3], i[4], i[5], i[6])
         scheduleItems.append(temp)
     for i in extraSelectResult:
-        temp = ExtraScheduleItem(i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7])
+        temp = ExtraScheduleItem(i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9])
         scheduleItems.append(temp)
     
     # Sort the elements inside the list in ascending order
@@ -283,6 +292,7 @@ def switchEverythingOff(mainCursor):
             return
         selectResult = selectResult[0]
     else:
+        print ("switchEverythingOff-1: ")
         print (ifSelectError)
     
     # If there is an entry against this room, send it to history table
@@ -299,12 +309,14 @@ def switchEverythingOff(mainCursor):
     
     (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
     if not insertRan:
+        print ("switchEverythingOff-2: ")
         print (ifInsertError)
         return
     
     # Now remove the entry from room_status table
     (deleteRan, ifDeleteError) = gvs.runQuery(mainCursor, gvs.QUERY_DELETE_ROOM_STATUS_FORMAT_ROOMID.format(str(gvs.THIS_ROOM)))
     if not deleteRan:
+        print ("switchEverythingOff-3: ")
         print (ifDeleteError)
         return
     print ("-Everything switched off and tables updated.")
@@ -317,7 +329,10 @@ def adjustForSlotChanges(mainCursor, activeCourse, currentSlot):
         print ("-No slot changes necessary.")
         return
 
-    (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_COURSEID.format(str(activeCourse.courseID)))
+    if str(activeCourse.courseID):
+        (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_COURSEID.format(str(-1)))
+    else:
+        (selectRan, ifSelectError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_FORMAT_COURSEID.format(str(activeCourse.courseID)))
     if selectRan:
         selectResult =  mainCursor.fetchall()
         if len(selectResult) == 0:
@@ -327,6 +342,7 @@ def adjustForSlotChanges(mainCursor, activeCourse, currentSlot):
             selectResult = selectResult[0]
 
     else:
+        print ("adjustForSlotChanges-1: ")
         print (ifSelectError)
     
     roomStatusDate = str(selectResult[0])
@@ -347,13 +363,17 @@ def adjustForSlotChanges(mainCursor, activeCourse, currentSlot):
     # Insert current room_status entry to history
     (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
     if not insertRan:
-        print(gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
+        print ("adjustForSlotChanges-2: ")
         print (ifInsertError)
         return
     
     # Update current room_status entry to next slot
-    (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_SLOT_COURSEID.format(str(activeCourse.activeSlot), str(activeCourse.courseID)))
+    if str(activeCourse.courseID):
+        (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_SLOT_COURSEID.format(str(activeCourse.activeSlot), str(-1)))
+    else:
+        (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_SLOT_COURSEID.format(str(activeCourse.activeSlot), str(activeCourse.courseID)))
     if not updateRan:
+        print ("adjustForSlotChanges-3: ")
         print (ifUpdateError)
         return
     print ("-Slot changes made.")
@@ -391,17 +411,19 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
 
                 (insertRan, ifInsertError) = gvs.runQuery(mainCursor, gvs.QUERY_INSERT_HISTORY_FORMAT_VALUES.format(insertValues))
                 if not insertRan:
+                    print ("turnOnAppliances-1: ")
                     print (ifInsertError)
                     return
     
                 # Now remove the entry from room_status table
                 (deleteRan, ifDeleteError) = gvs.runQuery(mainCursor, gvs.QUERY_DELETE_ROOM_STATUS_FORMAT_ROOMID.format(str(gvs.THIS_ROOM)))
                 if not deleteRan:
+                    print ("turnOnAppliances-2: ")
                     print (ifDeleteError)
                     return
 
         else:
-            print ("Error selecting: (turnOnAppliances)")
+            print ("turnOnAppliances-3: ")
             print (ifSelectError)
             return
 
@@ -410,7 +432,10 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
         # Generate values to insert in the format: (room_id, course_id, relay_used, class_date, slot)
         values = "("
         values += "'" + str(activeCourse.roomID) + "',"
-        values += "'" + str(activeCourse.courseID) + "',"
+        if str(activeCourse.courseID) == 'None':
+            values += "'" + str(-1) + "',"
+        else:
+            values += "'" + str(activeCourse.courseID) + "',"
         values += "'" + str(activeCourse.relaysOnToString()) + "',"
         values += "'" + str(rightnow.date()) + "',"
         values += "'" + str(activeCourse.slot) + "')"
@@ -420,14 +445,19 @@ def turnOnAppliances(mainCursor, activeCourse, DEBUG_TIME_DIFFERENCE):
         if insertRan:
             activeCourse.roomStatusUpdated = True
         else:
+            print ("turnOnAppliances-4: ")
             print (ifInsertError)
     
     # This part will switch on relays and update the relaysOn variable
     activeCourse.switchRelays()
 
     # Executing query to udpate the relays on variable
-    (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID.format(activeCourse.relaysOnToString(), str(activeCourse.courseID)))
+    if str(activeCourse.courseID) == 'None':
+        (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID.format(activeCourse.relaysOnToString(), str(-1)))
+    else:
+        (updateRan, ifUpdateError) = gvs.runQuery(mainCursor, gvs.QUERY_UPDATE_ROOM_STATUS_FORMAT_RELAYSUSED_COURSEID.format(activeCourse.relaysOnToString(), str(activeCourse.courseID)))
     if not updateRan:
+        print ("turnOnAppliances-5: ")
         print (ifUpdateError)
     return activeCourse
 
