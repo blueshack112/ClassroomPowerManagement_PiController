@@ -58,10 +58,11 @@ while True:
     (DEBUG_TIME_DIFFERENCE, SERVER_DATE_TIME) = utilities.getDebugTimeDifference(SERVER_DATE_TIME, DEBUG_TIME_DIFFERENCE, mainCursor)
     CURRENT_DATE_TIME = dt.datetime.now() - DEBUG_TIME_DIFFERENCE
 
+    # Check if week schedule is created or not
+    WEEK_SCHEDULE_CREATED = utilities.isWeekScheduleCreated(mainCursor)
+
     # If it is the start of the week and weekly schedule table is not updated, add schedule from schedule table to this week's schedule table
     if utilities.isStartOfWeek(DEBUG_TIME_DIFFERENCE) and not WEEK_SCHEDULE_CREATED:
-        WEEK_SCHEDULE_CREATED = utilities.createWeekSchedule(mainCursor)
-    elif not utilities.isEndOfWeek(DEBUG_TIME_DIFFERENCE) and not WEEK_SCHEDULE_CREATED:
         WEEK_SCHEDULE_CREATED = utilities.createWeekSchedule(mainCursor)
 
     # At the end fo the week, remove everything from the weekly schedule table and get it prepared for next week's schedule
@@ -149,10 +150,10 @@ while True:
     print ("Relays on right now: " + relayController.whichRelaysAreOn())
 
     if CURRENT_ACTIVE_COURSE:
-        print ("\n\nCurrent active course:")
+        print ("\nCurrent active course:")
         print ("\tCourse ID: " + str(CURRENT_ACTIVE_COURSE.courseID) + "   Teacher ID: " + str(CURRENT_ACTIVE_COURSE.teacherID) + "   Room ID: " + str(CURRENT_ACTIVE_COURSE.roomID) + "   Active Status: " + str(CURRENT_ACTIVE_COURSE.isActive) + "   Attendance: " + str(CURRENT_ACTIVE_COURSE.attendance) + "   Relays On: " + CURRENT_ACTIVE_COURSE.relaysOnToString() + "   Slot: " + str(CURRENT_ACTIVE_COURSE.slot) + "   Length: " + str(CURRENT_ACTIVE_COURSE.classLength))
     else:
-        print ("\n\nCurrent active course: None")
+        print ("\nCurrent active course: None")
     
 
     print ("\nToday's schedule: ")

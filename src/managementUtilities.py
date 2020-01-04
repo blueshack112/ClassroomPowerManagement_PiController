@@ -98,10 +98,9 @@ def isStartOfWeek(DEBUG_TIME_DIFFERENCE):
 
     # Ranges just to be safe
     rangestart = dt.datetime(rightnow.year, rightnow.month, rightnow.day, 8, 29, 0, 0)
-    rangeend = dt.datetime(rightnow.year, rightnow.month, rightnow.day, 8, 31, 0, 0)
     
     # Monday 8:30 is start of the week
-    if rightnow > rangestart and rightnow < rangeend and rightnow.weekday() == 0:
+    if not rightnow.weekday() == 5 or rightnow.weekday() == 6:
         return True
     else:
         return False
@@ -132,30 +131,40 @@ def truncateWeekSchedule(mainCursor):
         print (ifNormalError)
         return False
 
-    # # Run select normal query and get result if there was no error
-    # (extraQueryRan, ifError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_WEEK_SCHEDULE)
-    # if extraQueryRan:
-    #     result = mainCursor.fetchall()
-    # else:
-    #     print ("truncateWeekSchedule-2: ")
-    #     print (ifError)
-    #     return False
+    # Run select normal query and get result if there was no error
+    (extraQueryRan, ifError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_EXTRA_WEEK_SCHEDULE)
+    if extraQueryRan:
+        extraResult = mainCursor.fetchall()
+    else:
+        print ("truncateWeekSchedule-2: ")
+        print (ifError)
+        return False
     
-    # Truncate Table if their are entries present else return True
-    entriesInTable = len(normalResult)
-    if entriesInTable > 0:
+    # Truncate normal table if their are entries present else return True
+    entriesInNormalTable = len(normalResult)    
+    if entriesInNormalTable > 0:
         (truncateQueryRan, ifTruncateError) = gvs.runQuery(mainCursor, gvs.QUERY_TRUNCATE_WEEK_SCHEDULE)
-        if truncateQueryRan:
-            truncateResult = mainCursor._rowcount
-            truncateResult = truncateResult # Just to remove "Unused variable" warnings
-        else:
+        if not truncateQueryRan:
             print ("truncateWeekSchedule-3: ")
             print (ifTruncateError)
             return False
     else: 
-        print ("Table already empty.")
+        print ("Normal table already empty.")
         return True
-    print ("Week schedule truncated!")
+
+    # Truncate extra table if their are entries present else return True
+    entriesInExtraTable = len(extraResult)
+    if entriesInExtraTable > 0:
+        (truncateQueryRan, ifTruncateError) = gvs.runQuery(mainCursor, gvs.QUERY_TRUNCATE_EXTRA_WEEK_SCHEDULE)
+        if not truncateQueryRan:
+            print ("truncateWeekSchedule-3: ")
+            print (ifTruncateError)
+            return False
+    else: 
+        print ("Extra table already empty.")
+        return True
+    
+    print ("Normal and extra week schedule truncated!")
     return True
 
 # Fcuntion that will get all entries from schedule and put them in current week's table

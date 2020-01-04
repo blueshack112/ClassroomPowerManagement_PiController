@@ -200,6 +200,9 @@ class ExtraScheduleItem:
     # Returns -1 if attendance is not updated and a number if it is updated
     def checkAttendanceStatus (self, mainCursor):
         tempAttendance = -1
+        if str(self.courseID) == 'None':
+            self.attendance = tempAttendance
+            return
         (attendanceRan, ifAttendanceError) = gvs.runQuery(mainCursor, gvs.QUERY_GET_ROOM_STATUS_ATTENDANCE_FORMAT_COURSEID.format(str(self.courseID)))
         if attendanceRan:
             tempAttendance = mainCursor.fetchone()[0]
